@@ -1,0 +1,37 @@
+@props($users = [])
+@let([$userList, $setUserList] = useState($users))
+@let($a = getUser(), $count = 1)
+@const($MAX_LIMIT = 10)
+@const([$clickCount, $setClickCount] = useState(0))
+@useState($isEditMode, false)
+@await
+<blade>
+    <div>
+        total user: {{count($user)}}
+    </div>
+
+    <div test="{{$clickCount}}" @click($setClickCount($count + 1))>
+        click me ({{$clickCount}})
+    </div>
+    <div class="users">
+        @foreach($users as $user)
+            <div class="user">
+                {{$user->name}} : {{$user->email}}
+            </div>
+        @endforeach
+    </div>
+
+</blade>
+<script setup lang="typescript">
+    export default {
+        init(){
+            // init
+        },
+        mounted() {
+            console.log('mounted');
+        }
+    }
+</script>
+<style>
+    .root{}
+</style>

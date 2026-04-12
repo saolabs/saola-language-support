@@ -1,0 +1,161 @@
+{
+  "name": "one-laravel-template",
+  "displayName": "One Laravel Template",
+  "description": "Complete Laravel Blade-like syntax highlighting, snippets, and formatting for .one template files. Supports 80+ directives with autocomplete and features.",
+  "version": "1.7.0",
+  "publisher": "one-laravel-template",
+  "author": {
+    "name": "OneJS Framework",
+    "url": "https://onejs.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/template-languages/vscode-extension.git"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters"
+  ],
+  "keywords": [
+    "laravel",
+    "blade",
+    "template",
+    ".one",
+    "snippets",
+    "highlighting",
+    "formatting",
+    "onejs"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#FF2D55",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onLanguage:one",
+    "onLanguage:hcl",
+    "onLanguage:arc"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "one",
+        "aliases": [
+          "ONE Template",
+          "one"
+        ],
+        "extensions": [
+          ".one"
+        ],
+        "configuration": "./language-configurations/one.language-configuration.json"
+      },
+      {
+        "id": "hcl",
+        "aliases": [
+          "HCL Template",
+          "hcl"
+        ],
+        "extensions": [
+          ".hcl"
+        ],
+        "configuration": "./language-configurations/hcl.language-configuration.json"
+      },
+      {
+        "id": "arc",
+        "aliases": [
+          "ARC Template",
+          "arc"
+        ],
+        "extensions": [
+          ".arc"
+        ],
+        "configuration": "./language-configurations/arc.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "one",
+        "scopeName": "text.html.php.blade",
+        "path": "./syntaxes/one.tmLanguage.json",
+        "embeddedLanguages": {
+          "source.php": "php",
+          "source.css": "css",
+          "source.js": "javascript"
+        }
+      },
+      {
+        "language": "hcl",
+        "scopeName": "text.html.hcl",
+        "path": "./syntaxes/hcl.tmLanguage.json"
+      },
+      {
+        "language": "arc",
+        "scopeName": "text.html.arc",
+        "path": "./syntaxes/arc.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "one",
+        "path": "./snippets/one.json"
+      },
+      {
+        "language": "hcl",
+        "path": "./snippets/hcl.json"
+      },
+      {
+        "language": "arc",
+        "path": "./snippets/arc.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "one.checkVariables",
+        "title": "ONE: Check Undeclared Variables (Debug)"
+      }
+    ],
+    "configurationDefaults": {
+      "[one]": {
+        "editor.defaultFormatter": "one-laravel-template.one-laravel-template",
+        "editor.formatOnSave": true,
+        "editor.autoIndent": "full",
+        "editor.tabSize": 4,
+        "editor.formatOnType": true,
+        "editor.insertSpaces": true,
+        "editor.autoClosingBrackets": "always",
+        "editor.autoClosingTags": true,
+        "editor.linkedEditing": true
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "esbuild": "npm run esbuild-base -- --minify",
+    "esbuild-watch": "npm run esbuild-base -- --watch",
+    "package": "npm run esbuild",
+    "build": "npm run compile && npm run package",
+    "publish": "npm run build && npx vsce package",
+    "update": "npm run publish && ./update_extension.sh",
+    "lint": "eslint src --ext ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.27.3",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

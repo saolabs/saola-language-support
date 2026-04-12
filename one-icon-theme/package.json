@@ -1,0 +1,41 @@
+{
+  "name": "one-icon-theme",
+  "displayName": "ONE Icon Theme",
+  "description": "Custom icon theme for ONE template files (.one) with Blade-inspired design",
+  "version": "1.0.0",
+  "publisher": "one-laravel-template",
+  "author": "OneJS Framework (https://onejs.dev)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/template-languages/one-icon-theme.git"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "icon-theme",
+    "one",
+    "template",
+    "blade"
+  ],
+  "galleryBanner": {
+    "color": "#FF2D55",
+    "theme": "dark"
+  },
+  "contributes": {
+    "iconThemes": [
+      {
+        "id": "one-icon-theme",
+        "label": "ONE Icons",
+        "path": "./icons/file-icons.json"
+      }
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/template-languages/one-icon-theme/issues"
+  },
+  "homepage": "https://github.com/template-languages/one-icon-theme#readme"
+}

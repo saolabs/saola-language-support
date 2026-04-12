@@ -1,0 +1,13 @@
+{
+  "$schema": "vscode://schemas/icon-theme",
+  "version": "1.0",
+  "name": "ONE Icons",
+  "iconDefinitions": {
+    "_file_one": {
+      "iconPath": "./one.svg"
+    }
+  },
+  "fileExtensions": {
+    "one": "_file_one"
+  }
+}

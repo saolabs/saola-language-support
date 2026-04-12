@@ -1,0 +1,1032 @@
+{
+  "Props": {
+    "prefix": "b:props",
+    "body": "@props([${1:'propName' => ''}])",
+    "description": "Define component properties"
+  },
+  "Extends Layout": {
+    "prefix": "b:extends",
+    "body": "@extends('${1:layouts.app}')",
+    "description": "Extend parent layout"
+  },
+  "Section": {
+    "prefix": "b:section",
+    "body": [
+      "@section('${1:name}')",
+      "    $2",
+      "@endsection"
+    ],
+    "description": "Define content section"
+  },
+  "Yield": {
+    "prefix": "b:yield",
+    "body": "@yield('${1:name}', '${2:default}')",
+    "description": "Output section content"
+  },
+  "Include": {
+    "prefix": "b:include",
+    "body": "@include('${1:components.name}')",
+    "description": "Include partial view"
+  },
+  "Include If": {
+    "prefix": "b:includeIf",
+    "body": "@includeIf('${1:view.name}', [${2:'some' => 'data'}])",
+    "description": "Include if view exists"
+  },
+  "Include When": {
+    "prefix": "b:includeWhen",
+    "body": "@includeWhen(${1:\\$condition}, '${2:view.name}', [${3:'some' => 'data'}])",
+    "description": "Include when condition is true"
+  },
+  "Include Unless": {
+    "prefix": "b:includeUnless",
+    "body": "@includeUnless(${1:\\$condition}, '${2:view.name}', [${3:'some' => 'data'}])",
+    "description": "Include unless condition is true"
+  },
+  "Include First": {
+    "prefix": "b:includeFirst",
+    "body": "@includeFirst(['${1:view1.name}', '${2:view2.name}'], [${3:'some' => 'data'}])",
+    "description": "Include first view that exists"
+  },
+  "Slot": {
+    "prefix": "b:slot",
+    "body": [
+      "@slot('${1:header}')",
+      "    $2",
+      "@endslot"
+    ],
+    "description": "Define component slot"
+  },
+  "If": {
+    "prefix": "b:if",
+    "body": [
+      "@if(${1:\\$condition}})",
+      "    $2",
+      "@endif"
+    ],
+    "description": "If statement"
+  },
+  "If Else": {
+    "prefix": "b:if-else",
+    "body": [
+      "@if(${1:\\$condition}})",
+      "    $2",
+      "@else",
+      "    $3",
+      "@endif"
+    ],
+    "description": "If-else statement"
+  },
+  "If Elseif": {
+    "prefix": "b:if-elseif",
+    "body": [
+      "@if(${1:\\$condition1}})",
+      "    $2",
+      "@elseif(${3:\\$condition2}})",
+      "    $4",
+      "@else",
+      "    $5",
+      "@endif"
+    ],
+    "description": "If-elseif-else statement"
+  },
+  "Has Section": {
+    "prefix": "b:hasSection",
+    "body": [
+      "@hasSection('${1:name}')",
+      "    $2",
+      "@else",
+      "    $3",
+      "@endif"
+    ],
+    "description": "Check if section has content"
+  },
+  "Section Missing": {
+    "prefix": "b:sectionMissing",
+    "body": [
+      "@sectionMissing('${1:name}')",
+      "    $2",
+      "@endif"
+    ],
+    "description": "Check if section is missing"
+  },
+  "Unless": {
+    "prefix": "b:unless",
+    "body": [
+      "@unless(${1:\\$condition}})",
+      "    $2",
+      "@endunless"
+    ],
+    "description": "Unless (opposite of if)"
+  },
+  "Switch": {
+    "prefix": "b:switch",
+    "body": [
+      "@switch(${1:\\$variable}})",
+      "    @case('${2:value1}')",
+      "        $3",
+      "        @break",
+      "    @case('${4:value2}')",
+      "        $5",
+      "        @break",
+      "    @default",
+      "        $6",
+      "@endswitch"
+    ],
+    "description": "Switch statement"
+  },
+  "For": {
+    "prefix": "b:for",
+    "body": [
+      "@for(\\$i = ${1:0}}; \\$i < ${2:\\$count}}; \\$i++)",
+      "    $3",
+      "@endfor"
+    ],
+    "description": "For loop"
+  },
+  "Foreach": {
+    "prefix": "b:foreach",
+    "body": [
+      "@foreach(${1:\\$collection}} as ${2:\\$item}})",
+      "    $3",
+      "@endforeach"
+    ],
+    "description": "Foreach loop"
+  },
+  "Forelse": {
+    "prefix": "b:forelse",
+    "body": [
+      "@forelse(${1:\\$collection}} as ${2:\\$item}})",
+      "    $3",
+      "@empty",
+      "    $4",
+      "@endforelse"
+    ],
+    "description": "Foreach with empty state"
+  },
+  "While": {
+    "prefix": "b:while",
+    "body": [
+      "@while(${1:\\$condition}})",
+      "    $2",
+      "@endwhile"
+    ],
+    "description": "While loop"
+  },
+  "Each": {
+    "prefix": "b:each",
+    "body": "@each('${1:view.name}', ${2:\\$collection}}, '${3:variable}}', '${4:view.empty}}')",
+    "description": "Render view for each item"
+  },
+  "Blade Comment": {
+    "prefix": "b:comment",
+    "body": "{{-- ${1:comment}} --}}",
+    "description": "Blade comment"
+  },
+  "Echo": {
+    "prefix": "b:echo",
+    "body": "{{ ${1:\\$variable}} }}",
+    "description": "Echo escaped data"
+  },
+  "Echo Unescaped": {
+    "prefix": "b:echo-html",
+    "body": "{!! ${1:\\$html}} !!}",
+    "description": "Echo unescaped HTML"
+  },
+  "Verbatim": {
+    "prefix": "b:verbatim",
+    "body": [
+      "@verbatim",
+      "    {{ ${1:variable}} }}",
+      "@endverbatim"
+    ],
+    "description": "Disable Blade parsing"
+  },
+  "Auth": {
+    "prefix": "b:auth",
+    "body": [
+      "@auth",
+      "    $1",
+      "@endauth"
+    ],
+    "description": "Show if authenticated"
+  },
+  "Guest": {
+    "prefix": "b:guest",
+    "body": [
+      "@guest",
+      "    $1",
+      "@endguest"
+    ],
+    "description": "Show if guest"
+  },
+  "Can": {
+    "prefix": "b:can",
+    "body": [
+      "@can('${1:permission}')",
+      "    $2",
+      "@endcan"
+    ],
+    "description": "Check permission"
+  },
+  "Cannot": {
+    "prefix": "b:cannot",
+    "body": [
+      "@cannot('${1:permission}')",
+      "    $2",
+      "@endcannot"
+    ],
+    "description": "Check if cannot"
+  },
+  "Can Any": {
+    "prefix": "b:canany",
+    "body": [
+      "@canany(['${1:permission1}}', '${2:permission2}}'])",
+      "    $3",
+      "@endcanany"
+    ],
+    "description": "Check multiple permissions"
+  },
+  "Error": {
+    "prefix": "b:error",
+    "body": [
+      "@error('${1:fieldName}}')",
+      "    <span>{{ \\$message }}</span>",
+      "@enderror"
+    ],
+    "description": "Display validation error"
+  },
+  "CSRF": {
+    "prefix": "b:csrf",
+    "body": "@csrf",
+    "description": "CSRF token field"
+  },
+  "Method": {
+    "prefix": "b:method",
+    "body": "@method('${1:PUT}}')",
+    "description": "HTTP method field"
+  },
+  "Isset": {
+    "prefix": "b:isset",
+    "body": [
+      "@isset(${1:\\$variable}})",
+      "    $2",
+      "@endisset"
+    ],
+    "description": "Check if isset"
+  },
+  "Empty": {
+    "prefix": "b:empty",
+    "body": [
+      "@empty(${1:\\$variable}})",
+      "    <p>${2:No data}}</p>",
+      "@endempty"
+    ],
+    "description": "Check if empty"
+  },
+  "Push": {
+    "prefix": "b:push",
+    "body": [
+      "@push('${1:scripts}')",
+      "    $2",
+      "@endpush"
+    ],
+    "description": "Push to stack"
+  },
+  "Push Once": {
+    "prefix": "b:pushOnce",
+    "body": [
+      "@pushOnce('${1:scripts}')",
+      "    $2",
+      "@endPushOnce"
+    ],
+    "description": "Push once to stack"
+  },
+  "Push If": {
+    "prefix": "b:pushIf",
+    "body": [
+      "@pushIf(${1:\\$condition}}, '${2:scripts}')",
+      "    $3",
+      "@endPushIf"
+    ],
+    "description": "Conditional push"
+  },
+  "Prepend": {
+    "prefix": "b:prepend",
+    "body": [
+      "@prepend('${1:scripts}')",
+      "    $2",
+      "@endprepend"
+    ],
+    "description": "Prepend to stack"
+  },
+  "Prepend Once": {
+    "prefix": "b:prependOnce",
+    "body": [
+      "@prependOnce('${1:scripts}')",
+      "    $2",
+      "@endPrependOnce"
+    ],
+    "description": "Prepend once to stack"
+  },
+  "Stack": {
+    "prefix": "b:stack",
+    "body": "@stack('${1:scripts}}')",
+    "description": "Output stack content"
+  },
+  "Env": {
+    "prefix": "b:env",
+    "body": [
+      "@env('${1:staging}}')",
+      "    $2",
+      "@endenv"
+    ],
+    "description": "Check environment"
+  },
+  "Production": {
+    "prefix": "b:production",
+    "body": [
+      "@production",
+      "    $1",
+      "@endproduction"
+    ],
+    "description": "Show in production"
+  },
+  "Once": {
+    "prefix": "b:once",
+    "body": [
+      "@once",
+      "    $1",
+      "@endonce"
+    ],
+    "description": "Render once per cycle"
+  },
+  "Aware": {
+    "prefix": "b:aware",
+    "body": "@aware(['${1:propName}}'])",
+    "description": "Access parent component data"
+  },
+  "Class": {
+    "prefix": "b:class",
+    "body": "@class(['${1:p-4}}', ${2:'font-bold' => true}}])",
+    "description": "Conditional class"
+  },
+  "Style": {
+    "prefix": "b:style",
+    "body": "@style('${1:color: red;}}')",
+    "description": "Conditional style"
+  },
+  "Checked": {
+    "prefix": "b:checked",
+    "body": "@checked(${1:true}})",
+    "description": "Conditional checked"
+  },
+  "Selected": {
+    "prefix": "b:selected",
+    "body": "@selected(${1:true}})",
+    "description": "Conditional selected"
+  },
+  "Disabled": {
+    "prefix": "b:disabled",
+    "body": "@disabled(${1:true}})",
+    "description": "Conditional disabled"
+  },
+  "Readonly": {
+    "prefix": "b:readonly",
+    "body": "@readonly(${1:true}})",
+    "description": "Conditional readonly"
+  },
+  "Required": {
+    "prefix": "b:required",
+    "body": "@required(${1:true}})",
+    "description": "Conditional required"
+  },
+  "JS": {
+    "prefix": "b:js",
+    "body": "@js(${1:\\$data}})",
+    "description": "Escape JSON"
+  },
+  "Dump": {
+    "prefix": "b:dump",
+    "body": "@dump(${1:\\$variable}})",
+    "description": "Dump variable"
+  },
+  "DD": {
+    "prefix": "b:dd",
+    "body": "@dd(${1:\\$variable}})",
+    "description": "Dump and die"
+  },
+  "Lang": {
+    "prefix": "b:lang",
+    "body": "@lang('${1:messages.welcome}}')",
+    "description": "Translation string"
+  },
+  "JSON": {
+    "prefix": "b:json",
+    "body": "@json(${1:\\$data}})",
+    "description": "Output as JSON"
+  },
+  "Use": {
+    "prefix": "b:use",
+    "body": "@use('${1:App\\\\Models\\\\Flight}}')",
+    "description": "Import class"
+  },
+  "Use Alias": {
+    "prefix": "b:use-alias",
+    "body": "@use('${1:App\\\\Models\\\\Flight}}', '${2:Flight}}')",
+    "description": "Import with alias"
+  },
+  "Session": {
+    "prefix": "b:session",
+    "body": [
+      "@session('${1:status}}')",
+      "    $2",
+      "@endsession"
+    ],
+    "description": "Check session value"
+  },
+  "Component": {
+    "prefix": "b:component",
+    "body": [
+      "<x-${1:component}}",
+      "    :${2:prop}}=\"${3:\\$value}}\"",
+      ">",
+      "    $4",
+      "</x-${1:component}>"
+    ],
+    "description": "Use component"
+  },
+  "Slot Anonymous": {
+    "prefix": "b:slot-anon",
+    "body": [
+      "<x-slot:${1:header}}>${2:content}}</x-slot>"
+    ],
+    "description": "Anonymous slot"
+  },
+  "ONE Component": {
+    "prefix": "one:component",
+    "body": [
+      "@props([",
+      "\t'${1:message}' => '${2:default message}',",
+      "\t'${3:type}' => '${4:primary}'",
+      "])",
+      "",
+      "<blade>",
+      "\t<div class=\"component component-{{ $type }}\">",
+      "\t\t{{ $message }}",
+      "\t\t${5:<!-- content here -->}}",
+      "\t</div>",
+      "</blade>",
+      "",
+      "<style>",
+      "\t.component {",
+      "\t\tpadding: 1rem;",
+      "\t}",
+      "</style>"
+    ],
+    "description": "Component with @props directive"
+  },
+  "@props directive": {
+    "prefix": "one:props",
+    "body": [
+      "@props([",
+      "\t'${1:id}' => '',",
+      "\t'${2:title}' => 'Default Title',",
+      "\t'${3:class}' => ''",
+      "])"
+    ],
+    "description": "Define component properties with @props"
+  },
+  "@extends layout": {
+    "prefix": "one:extends",
+    "body": [
+      "@extends('${1:layouts.app}}')"
+    ],
+    "description": "Extend parent layout/template"
+  },
+  "@section block": {
+    "prefix": "one:section",
+    "body": [
+      "@section('${1:content}}')",
+      "\t${2:<!-- section content -->}}",
+      "@endsection"
+    ],
+    "description": "Define named content section"
+  },
+  "@section inline": {
+    "prefix": "one:section-inline",
+    "body": [
+      "@section('${1:title}}', '${2:Page Title}}')"
+    ],
+    "description": "Inline section definition"
+  },
+  "@yield content": {
+    "prefix": "one:yield",
+    "body": [
+      "@yield('${1:content}}', '${2:default content}}')"
+    ],
+    "description": "Output section content or default"
+  },
+  "@include partial": {
+    "prefix": "one:include",
+    "body": [
+      "@include('${1:components.button}}')"
+    ],
+    "description": "Include partial template"
+  },
+  "@include with data": {
+    "prefix": "one:include-data",
+    "body": [
+      "@include('${1:components.item}}', [",
+      "\t'${2:variable}}' => ${3:\\$variable}},",
+      "\t'${4:variable2}}' => ${5:\\$variable2}}",
+      "])"
+    ],
+    "description": "Include with data variables"
+  },
+  "@slot definition": {
+    "prefix": "one:slot",
+    "body": [
+      "@slot('${1:header}}')",
+      "\t${2:<!-- slot content -->}}",
+      "@endslot"
+    ],
+    "description": "Define component slot"
+  },
+  "@if conditional": {
+    "prefix": "one:if",
+    "body": [
+      "@if(${1:\\$condition}})",
+      "\t${2:<!-- content if true -->}}",
+      "@endif"
+    ],
+    "description": "Conditional if statement"
+  },
+  "@if-else conditional": {
+    "prefix": "one:if-else",
+    "body": [
+      "@if(${1:\\$condition}})",
+      "\t${2:<!-- if true -->}}",
+      "@else",
+      "\t${3:<!-- if false -->}}",
+      "@endif"
+    ],
+    "description": "If-else conditional statement"
+  },
+  "@if-elseif-else ladder": {
+    "prefix": "one:if-elseif-else",
+    "body": [
+      "@if(${1:\\$condition1}})",
+      "\t${2:<!-- first condition -->}}",
+      "@elseif(${3:\\$condition2}})",
+      "\t${4:<!-- second condition -->}}",
+      "@else",
+      "\t${5:<!-- default case -->}}",
+      "@endif"
+    ],
+    "description": "Complete conditional ladder"
+  },
+  "@unless directive": {
+    "prefix": "one:unless",
+    "body": [
+      "@unless(${1:\\$condition}})",
+      "\t${2:<!-- content unless true -->}}",
+      "@endunless"
+    ],
+    "description": "Display unless condition (opposite of if)"
+  },
+  "@switch statement": {
+    "prefix": "one:switch",
+    "body": [
+      "@switch(${1:\\$value}})",
+      "\t@case('${2:case1}}')",
+      "\t\t${3:<!-- case 1 -->}}",
+      "\t\t@break",
+      "\t@case('${4:case2}}')",
+      "\t\t${5:<!-- case 2 -->}}",
+      "\t\t@break",
+      "\t@default",
+      "\t\t${6:<!-- default -->}}",
+      "@endswitch"
+    ],
+    "description": "Switch case statement"
+  },
+  "@foreach loop": {
+    "prefix": "one:foreach",
+    "body": [
+      "@foreach(${1:\\$items}} as ${2:\\$item}})",
+      "\t${3:<!-- item content -->}}",
+      "@endforeach"
+    ],
+    "description": "Iterate over array"
+  },
+  "@foreach with key": {
+    "prefix": "one:foreach-key",
+    "body": [
+      "@foreach(${1:\\$items}} as ${2:\\$key}} => ${3:\\$item}})",
+      "\t<div key=\"{{ ${2:\\$key}} }}\">{{ ${3:\\$item}} }}</div>",
+      "@endforeach"
+    ],
+    "description": "Foreach with key and value"
+  },
+  "@forelse loop": {
+    "prefix": "one:forelse",
+    "body": [
+      "@forelse(${1:\\$items}} as ${2:\\$item}})",
+      "\t${3:<!-- item content -->}}",
+      "@empty",
+      "\t<p>${4:No items found}}</p>",
+      "@endforelse"
+    ],
+    "description": "Foreach with empty state"
+  },
+  "@for loop": {
+    "prefix": "one:for",
+    "body": [
+      "@for(${1:\\$i}} = 0; ${1:\\$i}} < ${2:10}}; ${1:\\$i}}++)",
+      "\t${3:<!-- loop body -->}}",
+      "@endfor"
+    ],
+    "description": "Traditional C-style for loop"
+  },
+  "@while loop": {
+    "prefix": "one:while",
+    "body": [
+      "@while(${1:\\$condition}})",
+      "\t${2:<!-- loop content -->}}",
+      "@endwhile"
+    ],
+    "description": "While loop"
+  },
+  "Variable interpolation": {
+    "prefix": "one:interpolate",
+    "body": [
+      "{{ ${1:\\$variable}} }}"
+    ],
+    "description": "Escaped variable output"
+  },
+  "Raw HTML output": {
+    "prefix": "one:raw",
+    "body": [
+      "{{{ ${1:\\$htmlContent}} }}}"
+    ],
+    "description": "Unescaped HTML output"
+  },
+  "@json output": {
+    "prefix": "one:json",
+    "body": [
+      "@json(${1:\\$data}})"
+    ],
+    "description": "Output variable as JSON"
+  },
+  "@auth check": {
+    "prefix": "one:auth",
+    "body": [
+      "@auth",
+      "\t{{ Auth::user()->name }}",
+      "@endauth"
+    ],
+    "description": "Show content if authenticated"
+  },
+  "@guest check": {
+    "prefix": "one:guest",
+    "body": [
+      "@guest",
+      "\t<p>Please log in</p>",
+      "@endguest"
+    ],
+    "description": "Show content if guest user"
+  },
+  "@can permission": {
+    "prefix": "one:can",
+    "body": [
+      "@can('${1:edit}}')",
+      "\t${2:<!-- authorized content -->}}",
+      "@endcan"
+    ],
+    "description": "Show if user has permission"
+  },
+  "@cannot permission": {
+    "prefix": "one:cannot",
+    "body": [
+      "@cannot('${1:delete}}')",
+      "\t${2:<!-- unauthorized content -->}}",
+      "@endcannot"
+    ],
+    "description": "Show if user cannot perform action"
+  },
+  "@error message": {
+    "prefix": "one:error",
+    "body": [
+      "@error('${1:fieldName}}')",
+      "\t<span class=\"error\">{{ \\$message }}</span>",
+      "@enderror"
+    ],
+    "description": "Display validation error message"
+  },
+  "@csrf token": {
+    "prefix": "one:csrf",
+    "body": [
+      "@csrf"
+    ],
+    "description": "CSRF token field"
+  },
+  "@method override": {
+    "prefix": "one:method",
+    "body": [
+      "@method('${1:PUT}}')"
+    ],
+    "description": "HTTP method override field"
+  },
+  "@isset variable": {
+    "prefix": "one:isset",
+    "body": [
+      "@isset(${1:\\$variable}})",
+      "\t{{ ${1:\\$variable}} }}",
+      "@endisset"
+    ],
+    "description": "Check if variable is set"
+  },
+  "@empty check": {
+    "prefix": "one:empty",
+    "body": [
+      "@empty(${1:\\$variable}})",
+      "\t<p>${2:No data available}}</p>",
+      "@endempty"
+    ],
+    "description": "Check if empty"
+  },
+  "@push stack": {
+    "prefix": "one:push",
+    "body": [
+      "@push('${1:scripts}}')",
+      "\t<script>",
+      "\t\t${2:// script code}}",
+      "\t</script>",
+      "@endpush"
+    ],
+    "description": "Push content to named stack"
+  },
+  "@stack display": {
+    "prefix": "one:stack",
+    "body": [
+      "@stack('${1:scripts}}')"
+    ],
+    "description": "Display stacked content"
+  },
+  "@verbatim block": {
+    "prefix": "one:verbatim",
+    "body": [
+      "@verbatim",
+      "\t{{ this_will_not_be_parsed }}",
+      "@endverbatim"
+    ],
+    "description": "Disable Blade parsing in block"
+  },
+  "HTML attribute binding": {
+    "prefix": "one:attr",
+    "body": [
+      "<div :attr=\"${1:\\$attributes}}\">{{content}}</div>"
+    ],
+    "description": "Bind HTML attributes"
+  },
+  "Class binding": {
+    "prefix": "one:class",
+    "body": [
+      ":class=\"{",
+      "\t'${1:active}}': ${2:\\$isActive}},",
+      "\t'${3:disabled}}': ${4:\\$isDisabled}}",
+      "}\""
+    ],
+    "description": "Dynamic class binding"
+  },
+  "Style binding": {
+    "prefix": "one:style",
+    "body": [
+      ":style=\"{",
+      "\t'color': ${1:\\$color}},",
+      "\t'fontSize': ${2:\\$size}} + 'px'",
+      "}\""
+    ],
+    "description": "Dynamic inline style binding"
+  },
+  "@click event": {
+    "prefix": "one:click",
+    "body": [
+      "@click=\"${1:methodName}}\""
+    ],
+    "description": "Click event handler"
+  },
+  "@click with params": {
+    "prefix": "one:click-param",
+    "body": [
+      "@click=\"${1:methodName}}(${2:\\$id}})\""
+    ],
+    "description": "Click event with parameters"
+  },
+  "@change event": {
+    "prefix": "one:change",
+    "body": [
+      "@change=\"${1:handleChange}}(\\$event)\""
+    ],
+    "description": "Change event handler"
+  },
+  "@submit event": {
+    "prefix": "one:submit",
+    "body": [
+      "@submit=\"${1:handleSubmit}}(\\$event)\""
+    ],
+    "description": "Form submit handler"
+  },
+  "@input event": {
+    "prefix": "one:input",
+    "body": [
+      "@input=\"${1:handleInput}}(\\$event.target.value)\""
+    ],
+    "description": "Input event handler"
+  },
+  "Component usage": {
+    "prefix": "one:component-use",
+    "body": [
+      "<x-${1:component-name}}",
+      "\t:${2:prop}}=\"${3:\\$value}}\"",
+      "\t${4:attribute}}=\"${5:value}}\"",
+      ">",
+      "\t${6:<!-- slot content -->}}",
+      "</x-${1:component-name}>"
+    ],
+    "description": "Use a component with attributes"
+  },
+  "Dynamic component": {
+    "prefix": "one:dynamic-component",
+    "body": [
+      "<component :is=\"${1:\\$componentName}}\" :${2:prop}}=\"${3:\\$value}}\" />"
+    ],
+    "description": "Render component dynamically"
+  },
+
+  "Declare variables": {
+    "prefix": "b:vars",
+    "body": "@vars([${1:'varName' => 'default'}])",
+    "description": "Declare reactive data variables/props"
+  },
+
+  "Local variable": {
+    "prefix": "b:let",
+    "body": "@let(${1:\\$name} = ${2:value})",
+    "description": "Declare local reactive variable"
+  },
+
+  "Constant": {
+    "prefix": "b:const",
+    "body": "@const(${1:\\$CONSTANT_NAME} = ${2:value})",
+    "description": "Declare non-reactive constant"
+  },
+
+  "Use State": {
+    "prefix": "b:useState",
+    "body": "@useState(${1:\\$state}, ${2:initialValue})",
+    "description": "Declare reactive state with setter"
+  },
+
+  "Block definition": {
+    "prefix": "b:block",
+    "body": [
+      "@block('${1:blockName}')",
+      "    ${2:content}",
+      "@endblock"
+    ],
+    "description": "Define reusable content block"
+  },
+
+  "Use block": {
+    "prefix": "b:useBlock",
+    "body": "@useBlock('${1:blockName}', '${2:defaultContent}')",
+    "description": "Use/yield defined block with default fallback"
+  },
+
+  "Mount block": {
+    "prefix": "b:mountBlock",
+    "body": "@mountBlock('${1:blockName}', '${2:defaultContent}')",
+    "description": "Mount block (alias for useBlock)"
+  },
+
+  "Output safe": {
+    "prefix": "b:out",
+    "body": "@out(${1:\\$variable})",
+    "description": "Output variable safely"
+  },
+
+  "Fetch data": {
+    "prefix": "b:fetch",
+    "body": "@fetch('${1:/api/endpoint}')",
+    "description": "Fetch data asynchronously from API"
+  },
+
+  "Await data": {
+    "prefix": "one:await",
+    "body": "@await",
+    "description": "Await async data completion"
+  },
+
+  "Register lifecycle": {
+    "prefix": "b:register",
+    "body": [
+      "@register",
+      "    mounted() {",
+      "        ${1:// Component mounted}",
+      "    },",
+      "    methods: {",
+      "        ${2:method() {}}",
+      "    }",
+      "@endregister"
+    ],
+    "description": "Register component lifecycle hooks"
+  },
+
+  "Component script": {
+    "prefix": "b:script",
+    "body": [
+      "@script",
+      "    mounted() {",
+      "        ${1:// Script executed}",
+      "    }",
+      "@endscript"
+    ],
+    "description": "Inline component script (alias for @register)"
+  },
+
+  "Setup initialization": {
+    "prefix": "b:setup",
+    "body": [
+      "@setup",
+      "    mounted() {",
+      "        ${1:// Setup logic}",
+      "    }",
+      "@endsetup"
+    ],
+    "description": "Setup component initialization"
+  },
+
+  "Click handler": {
+    "prefix": "b:click",
+    "body": "@click(${1:handleClick})",
+    "description": "Handle click event"
+  },
+
+  "Click with prevent": {
+    "prefix": "b:click.prevent",
+    "body": "@click.prevent(${1:handleClick})",
+    "description": "Click handler with preventDefault"
+  },
+
+  "Click with stop": {
+    "prefix": "b:click.stop",
+    "body": "@click.stop(${1:handleClick})",
+    "description": "Click handler with stopPropagation"
+  },
+
+  "Change handler": {
+    "prefix": "b:change",
+    "body": "@change(${1:handleChange})",
+    "description": "Handle change event"
+  },
+
+  "Input handler": {
+    "prefix": "b:input",
+    "body": "@input(${1:handleInput})",
+    "description": "Handle input event"
+  },
+
+  "Submit handler": {
+    "prefix": "b:submit",
+    "body": "@submit.prevent(${1:handleSubmit})",
+    "description": "Handle form submit with preventDefault"
+  },
+
+  "Bind attribute": {
+    "prefix": "b:attr-single",
+    "body": "@attr('${1:data-id}', ${2:\\$id})",
+    "description": "Bind single attribute dynamically"
+  },
+
+  "Bind attributes": {
+    "prefix": "b:attr-multi",
+    "body": "@attr([${1:'key' => \\$value}])",
+    "description": "Bind multiple attributes"
+  },
+
+  "View with wrapper": {
+    "prefix": "b:view",
+    "body": "@view(:subscribe)",
+    "description": "Configure view wrapper element"
+  },
+
+  "Wrapper element": {
+    "prefix": "b:wrapper",
+    "body": "@wrapper(:subscribe, :tag('${1:div}'))",
+    "description": "Configure wrapper with custom tag"
+  }
+}
+
+

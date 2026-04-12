@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- File document -->
+  <path d="M4 2h12l4 4v16H4z" fill="#FF2D55" opacity="0.8"/>
+  
+  <!-- Blade shape - top part -->
+  <path d="M8 6L12 10L16 6" stroke="#FF2D55" stroke-width="1.5" fill="none" stroke-linejoin="miter"/>
+  
+  <!-- Blade center diamond -->
+  <circle cx="12" cy="12" r="2" fill="#FF2D55"/>
+  
+  <!-- Bottom blade shape -->
+  <path d="M8 18L12 14L16 18" stroke="#FF2D55" stroke-width="1.5" fill="none" stroke-linejoin="miter"/>
+</svg>

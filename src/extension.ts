@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { OneFormatter } from './formatters/oneFormatter';
-import { HclFormatter } from './formatters/hclFormatter';
-import { ArcFormatter } from './formatters/arcFormatter';
+import { SaoFormatter } from './formatters/saoFormatter';
 
 const BLADE_DIRECTIVES = [
   // === Laravel Blade - Control Flow ===
@@ -18,11 +16,11 @@ const BLADE_DIRECTIVES = [
   { label: '@endswitch', detail: 'End switch block' },
 
   // === Laravel Blade - Loops ===
-  { label: '@foreach', detail: 'Loop through items', insertText: '@foreach(${1:\$items} as ${2:\$item})\n\t$0\n@endforeach' },
+  { label: '@foreach', detail: 'Loop through items (Modern)', insertText: '@foreach(${1:items} as ${2:item})\n\t$0\n@endforeach' },
   { label: '@endforeach', detail: 'End foreach loop' },
-  { label: '@forelse', detail: 'Loop with empty fallback', insertText: '@forelse(${1:\$items} as ${2:\$item})\n\t$0\n@empty\n\t\n@endforelse' },
+  { label: '@forelse', detail: 'Loop with empty fallback (Modern)', insertText: '@forelse(${1:items} as ${2:item})\n\t$0\n@empty\n\t\n@endforelse' },
   { label: '@endforelse', detail: 'End forelse loop' },
-  { label: '@for', detail: 'For loop', insertText: '@for(${1:\$i = 0; \$i < 10; \$i++})\n\t$0\n@endfor' },
+  { label: '@for', detail: 'For loop (Modern)', insertText: '@for(${1:i = 0; i < 10; i++})\n\t$0\n@endfor' },
   { label: '@endfor', detail: 'End for loop' },
   { label: '@while', detail: 'While loop', insertText: '@while(${1:condition})\n\t$0\n@endwhile' },
   { label: '@endwhile', detail: 'End while loop' },
@@ -59,7 +57,6 @@ const BLADE_DIRECTIVES = [
   { label: '@endcomponent', detail: 'End component block' },
   { label: '@slot', detail: 'Define component slot', insertText: '@slot(\'${1:name}\')\n\t$0\n@endslot' },
   { label: '@endslot', detail: 'End slot block' },
-  { label: '@props', detail: 'Define component properties', insertText: '@props(${1:[\'prop1\', \'prop2\']})' },
   { label: '@aware', detail: 'Access parent component variables' },
 
   // === Laravel Blade - Stacks ===
@@ -113,49 +110,74 @@ const BLADE_DIRECTIVES = [
   { label: '@endphp', detail: 'End PHP block' },
   { label: '@json', detail: 'JSON encode output', insertText: '@json(${1:\$data})' },
   { label: '@js', detail: 'JS encode output', insertText: '@js(${1:\$data})' },
-  { label: '@dump', detail: 'Dump variable for debugging', insertText: '@dump(${1:\$variable})' },
-  { label: '@dd', detail: 'Dump and die for debugging', insertText: '@dd(${1:\$variable})' },
+  { label: '@dump', detail: 'Dump variable for debugging', insertText: '@dump(${1:variable})' },
+  { label: '@dd', detail: 'Dump and die for debugging', insertText: '@dd(${1:variable})' },
   { label: '@use', detail: 'Use PHP class in template', insertText: '@use(\'${1:App\\Models\\User}\')' },
   { label: '@session', detail: 'Access session data', insertText: '@session(\'${1:key}\')' },
   { label: '@lang', detail: 'Translate language string', insertText: '@lang(\'${1:messages.key}\')' },
 
   // ======================================
-  // OneJS Custom Directives
+  // ======================================
+  // Saola Custom Directives (Modern Syntax)
   // ======================================
 
   // --- Data & Variables ---
-  { label: '@import', detail: 'Import template/component', insertText: '@import(${1:path})' },
-  { label: '@vars', detail: 'Declare data variables/props with defaults', insertText: '@vars(${1:\$variable = null})' },
-  { label: '@let', detail: 'Declare local reactive variables', insertText: '@let(${1:\$variable = value})' },
-  { label: '@const', detail: 'Declare constants (non-reactive)', insertText: '@const(${1:\$CONSTANT = value})' },
+  { label: '@import', detail: 'Import template/component', insertText: '@import(${1:__template__ + \'path\'} as ${2:Name})' },
+  { label: '@props', detail: 'Declare component properties', insertText: '@props(${1:title, theme=\'dark\'})' },
+  { label: '@vars', detail: 'Declare non-reactive variables', insertText: '@vars(${1:users, posts})' },
+  { label: '@let', detail: 'Declare mutable local variable', insertText: '@let(${1:varName = value})' },
+  { label: '@const', detail: 'Declare immutable constant', insertText: '@const(${1:NAME = value})' },
 
   // --- Reactive State ---
-  { label: '@useState', detail: 'Declare reactive state', insertText: '@useState(${1:\$state}, ${2:initialValue})' },
+  { label: '@states', detail: 'Declare reactive state (JS Object)', insertText: '@states({\n\t${1:count: 0}\n})' },
+  { label: '@state', detail: 'Declare reactive state (assignment)', insertText: '@state(\n\t${1:varName = value}\n)' },
+  { label: '@useState', detail: 'Declare reactive state (Legacy)', insertText: '@useState(${1:\$state}, ${2:initialValue})' },
 
-  // --- Output & Interpolation ---
-  { label: '@out', detail: 'Output variable (unescaped)', insertText: '@out(${1:\$variable})' },
-
-  // --- Event Handling ---
-  { label: '@click', detail: 'Handle click events', insertText: '@click(${1:handler})' },
-  { label: '@change', detail: 'Handle change events', insertText: '@change(${1:handler})' },
-  { label: '@input', detail: 'Handle input events', insertText: '@input(${1:handler})' },
-  { label: '@submit', detail: 'Handle form submit events', insertText: '@submit(${1:handler})' },
+  // --- Utility ---
+  { label: '@exec', detail: 'Execute expression silently', insertText: '@exec(${1:varName = value})' },
+  { label: '@out', detail: 'Output variable (unescaped)', insertText: '@out(${1:variable})' },
 
   // --- Attribute Binding ---
-  { label: '@attr', detail: 'Bind attributes dynamically', insertText: '@attr(\'${1:name}\', ${2:\$value})' },
-  { label: '@show', detail: 'Conditionally show element (display)', insertText: '@show(${1:\$condition})' },
+  { label: '@bind', detail: 'Two-way data binding (v-model)', insertText: '@bind(${1:variable})' },
+  { label: '@val', detail: 'Bind value attribute', insertText: '@val(${1:variable})' },
+  { label: '@attr', detail: 'Dynamic attributes', insertText: '@attr({${1:name: value}})' },
+  { label: '@class', detail: 'Dynamic CSS classes', insertText: '@class([${1:\'class\': condition}])' },
+  { label: '@style', detail: 'Dynamic inline styles', insertText: '@style({${1:\'property\': value}})' },
+  { label: '@show', detail: 'Toggle visibility (display: none)', insertText: '@show(${1:condition})' },
+  { label: '@hide', detail: 'Hide element (display: none)', insertText: '@hide(${1:condition})' },
+
+  // --- Event Handling ---
+  { label: '@click', detail: 'Click events', insertText: '@click(${1:handler()})' },
+  { label: '@input', detail: 'Input events', insertText: '@input(${1:handler()})' },
+  { label: '@change', detail: 'Change events', insertText: '@change(${1:handler()})' },
+  { label: '@submit', detail: 'Form submit events', insertText: '@submit(${1:handler()})' },
+  { label: '@keyup', detail: 'Key up events', insertText: '@keyup(${1:handler(event)})' },
+  { label: '@keydown', detail: 'Key down events', insertText: '@keydown(${1:handler(event)})' },
+  { label: '@keypress', detail: 'Key press events', insertText: '@keypress(${1:handler(event)})' },
+  { label: '@focus', detail: 'Focus events', insertText: '@focus(${1:handler()})' },
+  { label: '@blur', detail: 'Blur events', insertText: '@blur(${1:handler()})' },
+  { label: '@mouseenter', detail: 'Mouse enter events', insertText: '@mouseenter(${1:handler()})' },
+  { label: '@mouseleave', detail: 'Mouse leave events', insertText: '@mouseleave(${1:handler()})' },
+  { label: '@mouseover', detail: 'Mouse over events', insertText: '@mouseover(${1:handler()})' },
+  { label: '@mouseout', detail: 'Mouse out events', insertText: '@mouseout(${1:handler()})' },
+  { label: '@dblclick', detail: 'Double click events', insertText: '@dblclick(${1:handler()})' },
+  { label: '@contextmenu', detail: 'Context menu (right-click)', insertText: '@contextmenu(${1:handler()})' },
+  { label: '@wheel', detail: 'Mouse wheel events', insertText: '@wheel(${1:handler()})' },
+  { label: '@scroll', detail: 'Scroll events', insertText: '@scroll(${1:handler()})' },
+  { label: '@resize', detail: 'Resize events', insertText: '@resize(${1:handler()})' },
+  { label: '@load', detail: 'Load events', insertText: '@load(${1:handler()})' },
 
   // --- View Structure ---
   { label: '@view', detail: 'Configure view/component', insertText: '@view(${1::subscribe})' },
   { label: '@wrapper', detail: 'Wrap content in component', insertText: '@wrapper(\'${1:component}\')' },
-  { label: '@block', detail: 'Define reusable content block', insertText: '@block(\'${1:name}\')\n\t$0\n@endblock' },
+  { label: '@block', detail: 'Define content block', insertText: '@block(\'${1:name}\')\n\t$0\n@endblock' },
   { label: '@endblock', detail: 'End block' },
-  { label: '@useBlock', detail: 'Use/yield defined block', insertText: '@useBlock(\'${1:name}\')' },
-  { label: '@mountBlock', detail: 'Mount block (alias for useBlock)', insertText: '@mountBlock(\'${1:name}\')' },
+  { label: '@useBlock', detail: 'Render block content', insertText: '@useBlock(\'${1:name}\')' },
+  { label: '@mountBlock', detail: 'Mount block (alias)', insertText: '@mountBlock(\'${1:name}\')' },
 
-  // --- Async Data ---
-  { label: '@fetch', detail: 'Fetch data asynchronously', insertText: '@fetch(\'${1:/api/endpoint}\')' },
-  { label: '@await', detail: 'Await async data completion', insertText: '@await' },
+  // --- Async ---
+  { label: '@fetch', detail: 'Fetch data from API', insertText: '@fetch(\'${1:/api/endpoint}\')' },
+  { label: '@await', detail: 'Mark component as async', insertText: '@await' },
 
   // --- Lifecycle & Scripts ---
   { label: '@register', detail: 'Register component lifecycle', insertText: '@register\n\t$0\n@endregister' },
@@ -227,26 +249,70 @@ const _IMPLICIT_VARS = new Set([
 // PHP superglobals: $_GET, $_POST, $_SESSION, $_COOKIE, $_SERVER, $_FILES, $_ENV, $GLOBALS
 const _IS_PHP_SUPERGLOBAL = (v: string) => /^_[A-Z]/.test(v) || v === 'GLOBALS';
 
-function _isOneDocument(doc: vscode.TextDocument): boolean {
-  return doc.languageId === 'one' || doc.fileName.endsWith('.one');
+function _isSaoDocument(doc: vscode.TextDocument): boolean {
+  return doc.languageId === 'saola' || doc.languageId === 'sao' || doc.fileName.endsWith('.sao');
 }
 
-function _addAssignedVars(expr: string, vars: Set<string>): void {
-  const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
-  if (destructM) {
-    for (const m of destructM[1].matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
-    return;
+type SaoMode = 'modern' | 'legacy';
+
+function _detectSaoMode(text: string): { mode: SaoMode, firstWrapperLine: number } {
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.match(/^<(template|sao:blade)\b/i)) {
+      return { mode: 'modern', firstWrapperLine: i };
+    }
+    if (line.match(/^<blade\b/i)) {
+      return { mode: 'legacy', firstWrapperLine: i };
+    }
   }
-  for (const m of expr.matchAll(/\$(\w+)\s*=/g)) { vars.add(m[1]); }
+  // If no wrapper found, it's modern by default
+  return { mode: 'modern', firstWrapperLine: -1 };
 }
 
-function _addDeclarationVars(content: string, vars: Set<string>): void {
-  const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
-  if (arrayM) {
-    _collectArrayKeys(arrayM[1], vars);
-    return;
+function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void {
+  if (mode === 'legacy') {
+    const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
+    if (destructM) {
+      for (const m of destructM[1].matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
+      return;
+    }
+    for (const m of expr.matchAll(/\$(\w+)\s*=/g)) { vars.add(m[1]); }
+  } else {
+    // Modern: let x = 1, const [y, setY] = useState(0)
+    const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
+    if (destructM) {
+       for (const m of destructM[1].matchAll(/\w+/g)) { vars.add(m[0]); }
+       return;
+    }
+    for (const m of expr.matchAll(/(\w+)\s*=/g)) { vars.add(m[1]); }
   }
-  for (const m of content.matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
+}
+
+function _addDeclarationVars(content: string, vars: Set<string>, mode: SaoMode): void {
+  if (mode === 'legacy') {
+    const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
+    if (arrayM) {
+      _collectArrayKeys(arrayM[1], vars);
+      return;
+    }
+    for (const m of content.matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
+  } else {
+    // Modern: @props(a, b = 1) or @vars(x, y)
+    for (const m of content.matchAll(/(\w+)/g)) {
+      vars.add(m[1]);
+    }
+  }
+}
+
+function _addStates(content: string, vars: Set<string>): void {
+  // Parse simple JS object literal keys: { count: 0, user: {} }
+  for (const m of content.matchAll(/(\w+)\s*:/g)) {
+    const key = m[1];
+    vars.add(key);
+    // Add setter: setKey
+    vars.add('set' + key.charAt(0).toUpperCase() + key.slice(1));
+  }
 }
 
 function _addUseStateVars(content: string, vars: Set<string>): void {
@@ -414,138 +480,160 @@ function _extractDirectiveContent(lines: string[], startIndex: number): string {
 
 function _collectDeclaredVars(text: string): Set<string> {
   const vars = new Set<string>(_IMPLICIT_VARS);
+  const { mode } = _detectSaoMode(text);
   const lines = text.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
-    let m: RegExpMatchArray | null;
-    if ((m = t.match(/^@let\((.+)/)))            { _addAssignedVars(_extractDirectiveContent(lines, i), vars); continue; }
-    if ((m = t.match(/^@const\((.+)/)))          { _addAssignedVars(_extractDirectiveContent(lines, i), vars); continue; }
+    if (t.match(/^@states\((.+)/)) { _addStates(_extractDirectiveContent(lines, i), vars); continue; }
+    if (t.match(/^@let\((.+)/))    { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
+    if (t.match(/^@const\((.+)/))  { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     if (t.startsWith('@useState(')) {
       const content = _extractDirectiveContent(lines, i);
       _addUseStateVars(content, vars);
       continue;
     }
-    if ((m = t.match(/^@vars\((.+)/)))           { _addDeclarationVars(_extractDirectiveContent(lines, i), vars); continue; }
-    if ((m = t.match(/^@props\((.+)/)))          { _addDeclarationVars(_extractDirectiveContent(lines, i), vars); continue; }
-    if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/))) {
-      vars.add(m[1]); vars.add(m[2]); continue;
+    if (t.match(/^@vars\((.+)/))   { _addDeclarationVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
+    if (t.match(/^@props\((.+)/))  { _addDeclarationVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
+    
+    // Scoped loop vars
+    if (mode === 'legacy') {
+      let m: RegExpMatchArray | null;
+      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/))) {
+        vars.add(m[1]); vars.add(m[2]); continue;
+      }
+      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)/))) { vars.add(m[1]); continue; }
+      if ((m = t.match(/^@for\(\s*\$(\w+)\s*=/))) { vars.add(m[1]); continue; }
+    } else {
+      let m: RegExpMatchArray | null;
+      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)\s*,\s*(\w+)/))) {
+        vars.add(m[1]); vars.add(m[2]); continue;
+      }
+      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)/))) { vars.add(m[1]); continue; }
+      if ((m = t.match(/^@for\(\s*(\w+)\s*=/))) { vars.add(m[1]); continue; }
     }
-    if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)/))) { vars.add(m[1]); continue; }
-    if ((m = t.match(/^@for\(\s*\$(\w+)\s*=/))) { vars.add(m[1]); continue; }
   }
   return vars;
 }
 
 function _runAnalysis(document: vscode.TextDocument, collection: vscode.DiagnosticCollection): vscode.Diagnostic[] {
-  if (!_isOneDocument(document)) { return []; }
+  if (!_isSaoDocument(document)) { return []; }
 
   const text = document.getText();
-  const globalVars = new Set<string>(_IMPLICIT_VARS);
-
   const diagnostics: vscode.Diagnostic[] = [];
+  
+  const { mode, firstWrapperLine } = _detectSaoMode(text);
 
-  // ── Scope stack ────────────────────────────────────────────────────────────
-  // Frame 0 = global vars (always visible); inner frames = loop scopes.
-  const scopeStack: Set<string>[] = [new Set(globalVars)];
-  const isVarDeclared = (v: string) => scopeStack.some(s => s.has(v));
-  const declareInCurrentScope = (v: string) => scopeStack[scopeStack.length - 1].add(v);
-
-  const LOOP_CLOSE_RE    = /^@end(foreach|forelse|for|while)\b/i;
-  const LOOP_OPEN_RE     = /^@(foreach|forelse|for|while)\b/i;
-  // @if/@elseif with assignment-in-condition, including inline directives inside HTML/text
-  // Examples:
-  //   @if(!($person = getX()))
-  //   <h2>@if(!($t = count($projects))) ... @endif</h2>
-  const IF_ASSIGN_RE     = /@(?:if|elseif)\([^\n]*?\(\s*\$(\w+)\s*=[^=]/i;
-  const SCRIPT_OPEN_RE   = /^<script\b/i;
-  const SCRIPT_CLOSE_RE  = /^<\/script>/i;
-  const STYLE_OPEN_RE    = /^<style\b/i;
-  const STYLE_CLOSE_RE   = /^<\/style>/i;
-
+  // Check for priority rule violations (multiple level-0 wrappers)
   const lines = text.split('\n');
-  let lineStart = 0;
-  let inScriptOrStyle = false;
+  let wrapperCount = 0;
+  let firstWrapperType = '';
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const t = line.trim();
-
-    if (SCRIPT_OPEN_RE.test(t) || STYLE_OPEN_RE.test(t)) {
-      inScriptOrStyle = true;
-    }
-
-    if (inScriptOrStyle) {
-      if (SCRIPT_CLOSE_RE.test(t) || STYLE_CLOSE_RE.test(t)) {
-        inScriptOrStyle = false;
+    const t = lines[i].trim();
+    const mw = t.match(/^<(template|sao:blade|blade)\b/i);
+    if (mw) {
+      wrapperCount++;
+      if (wrapperCount === 1) firstWrapperType = mw[1].toLowerCase();
+      if (wrapperCount > 1) {
+        diagnostics.push(new vscode.Diagnostic(
+          new vscode.Range(i, 0, i, lines[i].length),
+          `Multiple level-0 wrappers detected. Only the first wrapper (<${firstWrapperType}>) will be processed.`,
+          vscode.DiagnosticSeverity.Warning
+        ));
       }
+    }
+  }
+
+  // Variable undeclared checks only work reliably in legacy mode (PHP $variable syntax).
+  // In modern mode, identifiers have no $ prefix so we cannot distinguish
+  // variables from function names, HTML attributes, CSS properties, etc.
+  if (mode === 'legacy') {
+    const globalVars = _collectDeclaredVars(text);
+    const scopeStack: Set<string>[] = [new Set(globalVars)];
+    const isVarDeclared = (v: string) => scopeStack.some(s => s.has(v));
+    const declareInCurrentScope = (v: string) => scopeStack[scopeStack.length - 1].add(v);
+
+    const LOOP_CLOSE_RE    = /^@end(foreach|forelse|for|while)\b/i;
+    const LOOP_OPEN_RE     = /^@(foreach|forelse|for|while)\b/i;
+    const IF_ASSIGN_RE     = /@(?:if|elseif)\([^\n]*?\(\s*\$(\w+)\s*=[^=]/i;
+    const SCRIPT_OPEN_RE   = /^<script\b/i;
+    const SCRIPT_CLOSE_RE  = /^<\/script>/i;
+    const STYLE_OPEN_RE    = /^<style\b/i;
+    const STYLE_CLOSE_RE   = /^<\/style>/i;
+
+    let lineStart = 0;
+    let inScriptOrStyle = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const t = line.trim();
+
+      if (SCRIPT_OPEN_RE.test(t) || STYLE_OPEN_RE.test(t)) {
+        inScriptOrStyle = true;
+      }
+
+      if (inScriptOrStyle) {
+        if (SCRIPT_CLOSE_RE.test(t) || STYLE_CLOSE_RE.test(t)) inScriptOrStyle = false;
+        lineStart += line.length + 1;
+        continue;
+      }
+
+      if (LOOP_CLOSE_RE.test(t) && scopeStack.length > 1) {
+        scopeStack.pop();
+      }
+
+      if (LOOP_OPEN_RE.test(t)) {
+        const newScope = new Set<string>();
+        const kvM = t.match(/\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/i);
+        if (kvM) { newScope.add(kvM[1]); newScope.add(kvM[2]); }
+        else {
+          const asM = t.match(/\bas\b\s+\$(\w+)/i);
+          if (asM) { newScope.add(asM[1]); }
+        }
+        const forM = t.match(/^@for\(\s*\$(\w+)\s*=/i);
+        if (forM) { newScope.add(forM[1]); }
+        scopeStack.push(newScope);
+      }
+
+      // Global declarations in directives
+      let declMatch: RegExpMatchArray | null;
+      if ((declMatch = t.match(/^@let\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if ((declMatch = t.match(/^@const\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (t.startsWith('@useState(')) {
+        _addUseStateVars(_extractDirectiveContent(lines, i), scopeStack[0]);
+      }
+      if ((declMatch = t.match(/^@vars\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if ((declMatch = t.match(/^@props\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+
+      // @exec assignments
+      if (/^@exec\(/i.test(t)) {
+        for (const am of t.matchAll(/\$(\w+)\s*=[^=]/g)) {
+          declareInCurrentScope(am[1]);
+        }
+      }
+
+      const ifAsgM = IF_ASSIGN_RE.exec(t);
+      if (ifAsgM) { declareInCurrentScope(ifAsgM[1]); }
+
+      // Check every $var usage in this line
+      const VAR_RE = /\$(\w+)/g;
+      let m: RegExpExecArray | null;
+      while ((m = VAR_RE.exec(line)) !== null) {
+        const varName = m[1];
+        if (isVarDeclared(varName)) { continue; }
+        if (_IS_PHP_SUPERGLOBAL(varName)) { continue; }
+
+        const absOffset = lineStart + m.index;
+        const diag = new vscode.Diagnostic(
+          new vscode.Range(document.positionAt(absOffset), document.positionAt(absOffset + m[0].length)),
+          `'$${varName}' is not declared. Use @let, @const, @useState, @vars, or @props.`,
+          vscode.DiagnosticSeverity.Warning
+        );
+        diag.source = 'SAO Template';
+        diagnostics.push(diag);
+      }
+
       lineStart += line.length + 1;
-      continue;
     }
-
-    // 1. Close loop scope BEFORE processing this line
-    if (LOOP_CLOSE_RE.test(t) && scopeStack.length > 1) {
-      scopeStack.pop();
-    }
-
-    // 2. Open a new scope for loop openers BEFORE checking usages on this line,
-    //    so loop-bound vars ($post in @foreach) are valid on the same line.
-    if (LOOP_OPEN_RE.test(t)) {
-      const newScope = new Set<string>();
-      const kvM = t.match(/\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/i);
-      if (kvM) { newScope.add(kvM[1]); newScope.add(kvM[2]); }
-      else {
-        const asM = t.match(/\bas\b\s+\$(\w+)/i);
-        if (asM) { newScope.add(asM[1]); }
-      }
-      const forM = t.match(/^@for\(\s*\$(\w+)\s*=/i);
-      if (forM) { newScope.add(forM[1]); }
-      scopeStack.push(newScope);
-    }
-
-    // 2.5 Global declarations in directives
-    let declMatch: RegExpMatchArray | null;
-    if ((declMatch = t.match(/^@let\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0]); }
-    if ((declMatch = t.match(/^@const\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0]); }
-    if (t.startsWith('@useState(')) {
-      const content = _extractDirectiveContent(lines, i);
-      _addUseStateVars(content, scopeStack[0]);
-    }
-    if ((declMatch = t.match(/^@vars\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0]); }
-    if ((declMatch = t.match(/^@props\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0]); }
-
-    // 3. @exec — extract ALL $var = assignments (multiple allowed, comma-separated)
-    if (/^@exec\(/i.test(t)) {
-      for (const am of t.matchAll(/\$(\w+)\s*=[^=]/g)) {
-        declareInCurrentScope(am[1]);
-      }
-    }
-
-    // 4. @if/$elseif with assignment-in-condition: @if(!($person = getX()))
-    //    Variable is declared from this line onward (all branches + after @endif)
-    const ifAsgM = IF_ASSIGN_RE.exec(t);
-    if (ifAsgM) { declareInCurrentScope(ifAsgM[1]); }
-
-    // 4. Check every $var usage in this line
-    const VAR_RE = /\$(\w+)/g;
-    let m: RegExpExecArray | null;
-    while ((m = VAR_RE.exec(line)) !== null) {
-      const varName = m[1];
-      if (isVarDeclared(varName)) { continue; }
-      if (_IS_PHP_SUPERGLOBAL(varName)) { continue; }
-
-      const absOffset = lineStart + m.index;
-      const startPos = document.positionAt(absOffset);
-      const endPos   = document.positionAt(absOffset + m[0].length);
-      const diag = new vscode.Diagnostic(
-        new vscode.Range(startPos, endPos),
-        `'$${varName}' is not declared. Use @let, @const, @useState, @vars, or @props.`,
-        vscode.DiagnosticSeverity.Warning
-      );
-      diag.source = 'ONE Template';
-      diagnostics.push(diag);
-    }
-
-    lineStart += line.length + 1;
   }
 
   collection.set(document.uri, diagnostics);
@@ -555,16 +643,16 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
 export function activate(context: vscode.ExtensionContext) {
   console.log('Template Languages extension is now active!');
 
-  const oneFormatter = new OneFormatter();
+  const saoFormatter = new SaoFormatter();
 
   // Register document formatter (Format Document)
   context.subscriptions.push(
-    vscode.languages.registerDocumentFormattingEditProvider('one', oneFormatter)
+    vscode.languages.registerDocumentFormattingEditProvider('sao', saoFormatter)
   );
 
   // Register range formatter (Format Selection)
   context.subscriptions.push(
-    vscode.languages.registerDocumentRangeFormattingEditProvider('one', {
+    vscode.languages.registerDocumentRangeFormattingEditProvider('sao', {
       provideDocumentRangeFormattingEdits(
         document: vscode.TextDocument,
         range: vscode.Range,
@@ -580,7 +668,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register onType formatting for Enter key (proper indentation on new line)
   context.subscriptions.push(
-    vscode.languages.registerOnTypeFormattingEditProvider('one', {
+    vscode.languages.registerOnTypeFormattingEditProvider('sao', {
       provideOnTypeFormattingEdits(
         document: vscode.TextDocument,
         position: vscode.Position,
@@ -613,9 +701,9 @@ export function activate(context: vscode.ExtensionContext) {
         const prevIndentLevel = Math.floor(prevIndent / tabSize);
 
         // Blade opening directives
-        const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment)\b/;
-        // HTML opening tag (not void, not self-closing)
-        const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z][a-zA-Z0-9-]*)\b[^/>]*>\s*$/;
+        const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment|states)\b/;
+        // HTML opening tag (not void, not self-closing, support custom tags)
+        const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
         // Opening brace/bracket
         const openBrace = /[\{\[]\s*$/;
 
@@ -648,25 +736,17 @@ export function activate(context: vscode.ExtensionContext) {
     }, '\n')
   );
 
-  context.subscriptions.push(
-    vscode.languages.registerDocumentFormattingEditProvider('hcl', new HclFormatter())
-  );
-
-  context.subscriptions.push(
-    vscode.languages.registerDocumentFormattingEditProvider('arc', new ArcFormatter())
-  );
-
-  // Register autocomplete for directives (Blade + OneJS)
+  // Register autocomplete for directives (Blade + SAO)
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
-      'one',
+      'sao',
       new OneDirectiveCompletionProvider(),
       '@'
     )
   );
 
   // ── Variable Diagnostics ──────────────────────────────────────────────────
-  const varDiagnostics = vscode.languages.createDiagnosticCollection('one-variables');
+  const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
   context.subscriptions.push(varDiagnostics);
 
   const analyzeDoc = (doc: vscode.TextDocument) => _runAnalysis(doc, varDiagnostics);
@@ -683,7 +763,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Debug command: run analysis on active file and report result
   context.subscriptions.push(
-    vscode.commands.registerCommand('one.checkVariables', () => {
+    vscode.commands.registerCommand('sao.checkVariables', () => {
       const doc = vscode.window.activeTextEditor?.document;
       if (!doc) { vscode.window.showErrorMessage('No active editor.'); return; }
       const text = doc.getText();
@@ -692,7 +772,7 @@ export function activate(context: vscode.ExtensionContext) {
       const diags = _runAnalysis(doc, varDiagnostics);
       const declared = _collectDeclaredVars(preBladeText);
       vscode.window.showInformationMessage(
-        `ONE Check — languageId: "${doc.languageId}" | declared: [${[...declared].filter(v => !_IMPLICIT_VARS.has(v)).join(', ')}] | warnings: ${diags.length}`
+        `SAO Check — languageId: "${doc.languageId}" | declared: [${[...declared].filter(v => !_IMPLICIT_VARS.has(v)).join(', ')}] | warnings: ${diags.length}`
       );
     })
   );

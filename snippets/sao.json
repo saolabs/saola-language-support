@@ -1,0 +1,263 @@
+{
+  "Props": {
+    "prefix": "b:props",
+    "body": "@props(${1:title, theme='dark'})",
+    "description": "Declare component properties"
+  },
+  "States": {
+    "prefix": "b:states",
+    "body": [
+      "@states({",
+      "    ${1:count: 0}",
+      "})"
+    ],
+    "description": "Define reactive state variables (JS Object literal)"
+  },
+  "State": {
+    "prefix": "b:state",
+    "body": [
+      "@state(",
+      "    ${1:varName = value}",
+      ")"
+    ],
+    "description": "Define reactive state (assignment syntax)"
+  },
+  "Extends Layout": {
+    "prefix": "b:extends",
+    "body": "@extends('${1:layouts.app}')",
+    "description": "Extend parent layout"
+  },
+  "Section": {
+    "prefix": "b:section",
+    "body": [
+      "@section('${1:name}')",
+      "    $2",
+      "@endsection"
+    ],
+    "description": "Define content section"
+  },
+  "Yield": {
+    "prefix": "b:yield",
+    "body": "@yield('${1:name}', '${2:default}')",
+    "description": "Output section content"
+  },
+  "Include": {
+    "prefix": "b:include",
+    "body": "@include('${1:components.name}')",
+    "description": "Include partial view"
+  },
+  "Include If": {
+    "prefix": "b:includeIf",
+    "body": "@includeIf('${1:view.name}', {${2:some: 'data'}})",
+    "description": "Include if view exists"
+  },
+  "Include When": {
+    "prefix": "b:includeWhen",
+    "body": "@includeWhen(${1:condition}, '${2:view.name}', {${3:some: 'data'}})",
+    "description": "Include when condition is true"
+  },
+  "Include Unless": {
+    "prefix": "b:includeUnless",
+    "body": "@includeUnless(${1:condition}, '${2:view.name}', {${3:some: 'data'}})",
+    "description": "Include unless condition is true"
+  },
+  "Include First": {
+    "prefix": "b:includeFirst",
+    "body": "@includeFirst(['${1:view1.name}', '${2:view2.name}'], {${3:some: 'data'}})",
+    "description": "Include first view that exists"
+  },
+  "Foreach": {
+    "prefix": "b:foreach",
+    "body": [
+      "@foreach(${1:items} as ${2:item})",
+      "    $3",
+      "@endforeach"
+    ],
+    "description": "Modern foreach loop (no \$ prefix)"
+  },
+  "Template Wrapper": {
+    "prefix": "sao:template",
+    "body": [
+      "<template>",
+      "    $0",
+      "</template>"
+    ],
+    "description": "Modern Saola wrapper"
+  },
+  "Legacy Wrapper": {
+    "prefix": "sao:blade",
+    "body": [
+      "<blade>",
+      "    $0",
+      "</blade>"
+    ],
+    "description": "Legacy PHP/Blade wrapper"
+  },
+  "Script Setup": {
+    "prefix": "sao:script",
+    "body": [
+      "<script setup lang=\"ts\">",
+      "import { saola } from 'saola';",
+      "export default {",
+      "    name: '${1:ComponentName}',",
+      "    methods: {",
+      "        $2",
+      "    }",
+      "}",
+      "</script>"
+    ],
+    "description": "Client-side logic script block"
+  },
+  "Slot": {
+    "prefix": "b:slot",
+    "body": [
+      "@slot('${1:header}')",
+      "    $2",
+      "@endslot"
+    ],
+    "description": "Define component slot"
+  },
+  "If": {
+    "prefix": "b:if",
+    "body": [
+      "@if(${1:condition})",
+      "    $2",
+      "@endif"
+    ],
+    "description": "If statement"
+  },
+  "If Else": {
+    "prefix": "b:if-else",
+    "body": [
+      "@if(${1:condition})",
+      "    $2",
+      "@else",
+      "    $3",
+      "@endif"
+    ],
+    "description": "If-else statement"
+  },
+  "If Elseif": {
+    "prefix": "b:if-elseif",
+    "body": [
+      "@if(${1:condition1})",
+      "    $2",
+      "@elseif(${3:condition2})",
+      "    $4",
+      "@else",
+      "    $5",
+      "@endif"
+    ],
+    "description": "If-elseif-else statement"
+  },
+  "Has Section": {
+    "prefix": "b:hasSection",
+    "body": [
+      "@hasSection('${1:name}')",
+      "    $2",
+      "@else",
+      "    $3",
+      "@endif"
+    ],
+    "description": "Check if section has content"
+  },
+  "Section Missing": {
+    "prefix": "b:sectionMissing",
+    "body": [
+      "@sectionMissing('${1:name}')",
+      "    $2",
+      "@endif"
+    ],
+    "description": "Check if section is missing"
+  },
+  "Bind": {
+    "prefix": "b:bind",
+    "body": "@bind(${1:variable})",
+    "description": "Two-way data binding"
+  },
+  "Value Binding": {
+    "prefix": "b:val",
+    "body": "@val(${1:variable})",
+    "description": "Bind value attribute"
+  },
+  "Checked Binding": {
+    "prefix": "b:checked",
+    "body": "@checked(${1:condition})",
+    "description": "Bind checked attribute"
+  },
+  "Selected Binding": {
+    "prefix": "b:selected",
+    "body": "@selected(${1:condition})",
+    "description": "Bind selected attribute"
+  },
+  "Disabled Binding": {
+    "prefix": "b:disabled",
+    "body": "@disabled(${1:condition})",
+    "description": "Bind disabled attribute"
+  },
+  "Readonly Binding": {
+    "prefix": "b:readonly",
+    "body": "@readonly(${1:condition})",
+    "description": "Bind readonly attribute"
+  },
+  "Required Binding": {
+    "prefix": "b:required",
+    "body": "@required(${1:condition})",
+    "description": "Bind required attribute"
+  },
+  "Class Binding": {
+    "prefix": "b:class",
+    "body": "@class([$1])",
+    "description": "Dynamic CSS classes"
+  },
+  "Style Binding": {
+    "prefix": "b:style",
+    "body": "@style({$1})",
+    "description": "Dynamic inline styles"
+  },
+  "Attr Binding": {
+    "prefix": "b:attr",
+    "body": "@attr({$1})",
+    "description": "Dynamic generic attributes"
+  },
+  "Show": {
+    "prefix": "b:show",
+    "body": "@show(${1:condition})",
+    "description": "Toggle visibility (display: block/none)"
+  },
+  "Hide": {
+    "prefix": "b:hide",
+    "body": "@hide(${1:condition})",
+    "description": "Hide element (display: none)"
+  },
+  "Let": {
+    "prefix": "b:let",
+    "body": "@let(${1:varName = value})",
+    "description": "Declare mutable local variable"
+  },
+  "Const": {
+    "prefix": "b:const",
+    "body": "@const(${1:NAME = value})",
+    "description": "Declare immutable constant"
+  },
+  "Import": {
+    "prefix": "b:import",
+    "body": "@import(__template__ + '${1:path}' as ${2:Name})",
+    "description": "Import component/template"
+  },
+  "Exec": {
+    "prefix": "b:exec",
+    "body": "@exec(${1:expression})",
+    "description": "Execute expression silently"
+  },
+  "Click Event": {
+    "prefix": "e:click",
+    "body": "@click(${1:handler()})",
+    "description": "Click event handler"
+  },
+  "Input Event": {
+    "prefix": "e:input",
+    "body": "@input(${1:handler()})",
+    "description": "Input event handler"
+  }
+}

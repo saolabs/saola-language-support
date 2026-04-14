@@ -1,0 +1,323 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SAO Template",
+  "scopeName": "text.html.php.blade",
+  "fileTypes": ["sao"],
+  "foldingStartMarker": "(@(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|env|production|verbatim|error|setup|register|script|block|comment)\\b|\\{\\s*$)",
+  "foldingStopMarker": "(@end(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|block|comment)|^\\s*\\})",
+  "patterns": [
+    {
+      "comment": "Legacy PHP Syntax wrapper - Pass-through mode",
+      "begin": "(<)(blade)(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "end": "(</)(blade)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#legacy-blade" },
+        { "include": "text.html.derivative" }
+      ]
+    },
+    {
+      "comment": "Modern Syntax wrappers",
+      "begin": "(<)(template|sao:blade)(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "end": "(</)(template|sao:blade)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#blade" },
+        { "include": "text.html.derivative" }
+      ]
+    },
+    {
+      "include": "#blade"
+    },
+    {
+      "include": "text.html.derivative"
+    }
+  ],
+  "repository": {
+    "blade": {
+      "patterns": [
+        {
+          "begin": "{{--",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.begin.blade"
+            }
+          },
+          "end": "--}}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.end.blade"
+            }
+          },
+          "name": "comment.block.blade"
+        },
+        {
+          "comment": "@php ... @endphp block with PHP highlighting",
+          "begin": "(?<![A-Za-z0-9_@])(@php)\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          },
+          "end": "(?<![A-Za-z0-9_@])(@endphp)\\b",
+          "endCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          },
+          "contentName": "source.js",
+          "name": "meta.embedded.block.php.blade",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "comment": "@comment ... @endcomment as blade comment",
+          "begin": "(?<![A-Za-z0-9_@])(@comment)\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          },
+          "end": "(?<![A-Za-z0-9_@])(@endcomment)\\b",
+          "endCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          },
+          "name": "comment.block.blade.directive"
+        },
+        {
+          "begin": "(?<!@){{{",
+          "beginCaptures": {
+            "0": {
+              "name": "support.function.construct.begin.blade"
+            }
+          },
+          "contentName": "source.js",
+          "end": "}}}",
+          "endCaptures": {
+            "0": {
+              "name": "support.function.construct.end.blade"
+            }
+          },
+          "name": "meta.function.echo.blade",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "begin": "(?<!@){!!",
+          "beginCaptures": {
+            "0": {
+              "name": "support.function.construct.begin.blade"
+            }
+          },
+          "contentName": "source.js",
+          "end": "!!}",
+          "endCaptures": {
+            "0": {
+              "name": "support.function.construct.end.blade"
+            }
+          },
+          "name": "meta.function.echo.blade",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "begin": "(?<![@{]){{",
+          "beginCaptures": {
+            "0": {
+              "name": "support.function.construct.begin.blade"
+            }
+          },
+          "contentName": "source.js",
+          "end": "}}",
+          "endCaptures": {
+            "0": {
+              "name": "support.function.construct.end.blade"
+            }
+          },
+          "name": "meta.function.echo.blade",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "comment": "Blade directive with parenthesized arguments - highlight args as PHP",
+          "begin": "(?<![A-Za-z0-9_@])(@(?:import|if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|class|style|checked|selected|disabled|readonly|required|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await|attr|show|exec|bind))\\s*(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            },
+            "2": {
+              "name": "punctuation.definition.arguments.begin.blade"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.arguments.end.blade"
+            }
+          },
+          "contentName": "source.js",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "comment": "Event directive with args - @click(), @change(), etc.",
+          "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave))\\s*(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.event.blade"
+            },
+            "2": {
+              "name": "punctuation.definition.arguments.begin.blade"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.arguments.end.blade"
+            }
+          },
+          "contentName": "source.js",
+          "patterns": [
+            {
+              "include": "#js-expr"
+            }
+          ]
+        },
+        {
+          "comment": "All Blade/SAO directives without args",
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  if|elseif|else|endif|\n  unless|endunless|\n  switch|case|break|default|endswitch|\n  for|endfor|foreach|endforeach|forelse|empty|endforelse|\n  while|endwhile|\n  props|extends|section|endsection|yield|include|includeIf|includeWhen|includeUnless|includeFirst|component|endcomponent|slot|endslot|\n  push|endpush|pushOnce|endPushOnce|pushIf|endPushIf|\n  prepend|endprepend|prependOnce|endPrependOnce|\n  stack|once|endonce|auth|endauth|guest|endguest|can|endcan|cannot|endcannot|canany|endcanany|\n  csrf|method|error|enderror|isset|endisset|empty|endempty|\n  hasSection|sectionMissing|json|js|class|style|\n  checked|selected|disabled|readonly|required|aware|\n  use|session|lang|dump|dd|env|endenv|production|endproduction|verbatim|endverbatim|\n  comment|endcomment|\n  php|endphp|vars|let|const|state|states|useState|each|append|break|continue|default|overwrite|parent|show|stop|\n  view|wrapper|block|endblock|useBlock|mountBlock|fetch|\n  await|endawait|setup|endsetup|register|endregister|script|endscript|\n  out|import|exec|bind\n)\\b",
+          "name": "keyword.blade"
+        },
+        {
+          "comment": "Event directives without args fallback",
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave|attr\n)(?=\\s*\\()",
+          "name": "keyword.control.event.blade"
+        },
+        {
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  livewireStyles|livewireScripts\n)\\b",
+          "name": "support.function.blade"
+        }
+      ]
+    },
+    "js-expr": {
+      "patterns": [
+        {
+          "match": "\\b(as)\\b",
+          "name": "keyword.control.js"
+        },
+        {
+          "include": "source.js"
+        }
+      ]
+    },
+    "php-expr": {
+      "patterns": [
+        {
+          "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*",
+          "name": "variable.other.php"
+        },
+        {
+          "match": "->\\w+",
+          "name": "variable.other.property.php"
+        },
+        {
+          "match": "\\[\\w+\\]",
+          "name": "punctuation.definition.array.php"
+        },
+        {
+          "match": "'(?:[^'\\\\]|\\\\.)*'",
+          "name": "string.quoted.single.php"
+        },
+        {
+          "match": "\"(?:[^\"\\\\]|\\\\.)*\"",
+          "name": "string.quoted.double.php"
+        },
+        {
+          "match": "\\b(true|false|null|TRUE|FALSE|NULL)\\b",
+          "name": "constant.language.php"
+        },
+        {
+          "match": "\\b\\d+\\.?\\d*\\b",
+          "name": "constant.numeric.php"
+        },
+        {
+          "match": "(===|==|!=|!==|<=|>=|<|>|&&|\\|\\||and|or|xor|\\+|-|\\*|/|%|\\?|:)",
+          "name": "keyword.operator.php"
+        },
+        {
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+          "name": "entity.name.function.php"
+        }
+      ]
+    },
+    "legacy-blade": {
+      "patterns": [
+        {
+          "begin": "{{--",
+          "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.blade" } },
+          "end": "--}}",
+          "endCaptures": { "0": { "name": "punctuation.definition.comment.end.blade" } },
+          "name": "comment.block.blade"
+        },
+        {
+          "begin": "(?<!@){{",
+          "beginCaptures": { "0": { "name": "support.function.construct.begin.blade" } },
+          "contentName": "source.php",
+          "end": "}}",
+          "endCaptures": { "0": { "name": "support.function.construct.end.blade" } },
+          "patterns": [{ "include": "#php-expr" }]
+        },
+        {
+          "begin": "(?<![A-Za-z0-9_@])(@(?:if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|class|style|checked|selected|disabled|readonly|required|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await|attr|show|exec|bind))\\s*(\\()",
+          "beginCaptures": {
+            "1": { "name": "keyword.blade" },
+            "2": { "name": "punctuation.definition.arguments.begin.blade" }
+          },
+          "end": "\\)",
+          "endCaptures": { "0": { "name": "punctuation.definition.arguments.end.blade" } },
+          "contentName": "source.php",
+          "patterns": [{ "include": "#php-expr" }]
+        },
+        {
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  if|elseif|else|endif|\n  unless|endunless|\n  switch|case|break|default|endswitch|\n  for|endfor|foreach|endforeach|forelse|empty|endforelse|\n  while|endwhile|\n  props|extends|section|endsection|yield|include|includeIf|includeWhen|includeUnless|includeFirst|component|endcomponent|slot|endslot|\n  push|endpush|pushOnce|endPushOnce|pushIf|endPushIf|\n  prepend|endprepend|prependOnce|endPrependOnce|\n  stack|once|endonce|auth|endauth|guest|endguest|can|endcan|cannot|endcannot|canany|endcanany|\n  csrf|method|error|enderror|isset|endisset|empty|endempty|\n  hasSection|sectionMissing|json|js|class|style|\n  checked|selected|disabled|readonly|required|aware|\n  use|session|lang|dump|dd|env|endenv|production|endproduction|verbatim|endverbatim|\n  comment|endcomment|\n  php|endphp|vars|let|const|state|states|useState|each|append|break|continue|default|overwrite|parent|show|stop|\n  view|wrapper|block|endblock|useBlock|mountBlock|fetch|\n  await|endawait|setup|endsetup|register|endregister|script|endscript|\n  out|import|exec|bind\n)\\b",
+          "name": "keyword.blade"
+        }
+      ]
+    }
+  }
+}

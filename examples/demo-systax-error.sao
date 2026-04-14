@@ -1,0 +1,9 @@
+@props(title, content)
+<template>
+    <h1>{{ title }}</h1>
+    <p>{{ content }}</p>
+</template>
+<blade>
+    <h1>{{ $title }}</h1>
+    <p>{{ $content }}</p>
+</blade>

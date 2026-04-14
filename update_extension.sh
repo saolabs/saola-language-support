@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Script to automatically update One Laravel Template extension
+# Script to automatically update Saola Language Support extension
 # Usage: ./update_extension.sh
 
-echo "🔄 Updating One Laravel Template extension..."
+echo "🔄 Updating Saola Language Support extension..."
 
 # Get the latest .vsix file
-VSIX_FILE=$(ls -t one-laravel-template-*.vsix | head -1)
+VSIX_FILE=$(ls -t saola-language-support-*.vsix | head -1)
 
 if [ -z "$VSIX_FILE" ]; then
     echo "❌ No .vsix file found!"

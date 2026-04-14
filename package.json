@@ -1,9 +1,9 @@
 {
-  "name": "one-laravel-template",
-  "displayName": "One Laravel Template",
-  "description": "Complete Laravel Blade-like syntax highlighting, snippets, and formatting for .one template files. Supports 80+ directives with autocomplete and features.",
-  "version": "1.7.0",
-  "publisher": "one-laravel-template",
+  "name": "saola-language-support",
+  "displayName": "Saola Language Support",
+  "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
+  "version": "1.7.7",
+  "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
     "url": "https://onejs.dev"
@@ -24,11 +24,11 @@
     "laravel",
     "blade",
     "template",
-    ".one",
+    ".sao",
     "snippets",
     "highlighting",
     "formatting",
-    "onejs"
+    "sao"
   ],
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -36,92 +36,50 @@
     "theme": "dark"
   },
   "activationEvents": [
-    "onLanguage:one",
-    "onLanguage:hcl",
-    "onLanguage:arc"
+    "onLanguage:sao"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "one",
+        "id": "sao",
         "aliases": [
-          "ONE Template",
-          "one"
+          "SAO Template",
+          "sao"
         ],
         "extensions": [
-          ".one"
+          ".sao"
         ],
-        "configuration": "./language-configurations/one.language-configuration.json"
-      },
-      {
-        "id": "hcl",
-        "aliases": [
-          "HCL Template",
-          "hcl"
-        ],
-        "extensions": [
-          ".hcl"
-        ],
-        "configuration": "./language-configurations/hcl.language-configuration.json"
-      },
-      {
-        "id": "arc",
-        "aliases": [
-          "ARC Template",
-          "arc"
-        ],
-        "extensions": [
-          ".arc"
-        ],
-        "configuration": "./language-configurations/arc.language-configuration.json"
+        "configuration": "./language-configurations/sao.language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "one",
+        "language": "sao",
         "scopeName": "text.html.php.blade",
-        "path": "./syntaxes/one.tmLanguage.json",
+        "path": "./syntaxes/sao.tmLanguage.json",
         "embeddedLanguages": {
           "source.php": "php",
           "source.css": "css",
           "source.js": "javascript"
         }
-      },
-      {
-        "language": "hcl",
-        "scopeName": "text.html.hcl",
-        "path": "./syntaxes/hcl.tmLanguage.json"
-      },
-      {
-        "language": "arc",
-        "scopeName": "text.html.arc",
-        "path": "./syntaxes/arc.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "one",
-        "path": "./snippets/one.json"
-      },
-      {
-        "language": "hcl",
-        "path": "./snippets/hcl.json"
-      },
-      {
-        "language": "arc",
-        "path": "./snippets/arc.json"
+        "language": "sao",
+        "path": "./snippets/sao.json"
       }
     ],
     "commands": [
       {
-        "command": "one.checkVariables",
-        "title": "ONE: Check Undeclared Variables (Debug)"
+        "command": "sao.checkVariables",
+        "title": "SAO: Check Undeclared Variables (Debug)"
       }
     ],
     "configurationDefaults": {
-      "[one]": {
-        "editor.defaultFormatter": "one-laravel-template.one-laravel-template",
+      "[sao]": {
+        "editor.defaultFormatter": "saolabs.saola-language-support",
         "editor.formatOnSave": true,
         "editor.autoIndent": "full",
         "editor.tabSize": 4,
@@ -129,7 +87,12 @@
         "editor.insertSpaces": true,
         "editor.autoClosingBrackets": "always",
         "editor.autoClosingTags": true,
-        "editor.linkedEditing": true
+        "editor.linkedEditing": true,
+        "emmet.includeLanguages": {
+          "sao": "html"
+        },
+        "emmet.showAbbreviationSuggestions": true,
+        "emmet.showExpandedAbbreviation": "always"
       }
     }
   },
@@ -156,6 +119,6 @@
     "esbuild": "^0.27.3",
     "eslint": "^8.0.0",
     "prettier": "^3.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.3"
   }
 }

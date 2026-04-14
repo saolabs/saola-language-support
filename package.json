@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",

@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.7.8",
+  "version": "1.8.3",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
@@ -36,11 +36,24 @@
     "theme": "dark"
   },
   "activationEvents": [
-    "onLanguage:sao"
+    "onLanguage:sao",
+    "onLanguage:saola"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
+      {
+        "id": "saola",
+        "aliases": [
+          "Saola Template",
+          "saola",
+          "SAO"
+        ],
+        "extensions": [
+          ".sao"
+        ],
+        "configuration": "./language-configurations/sao.language-configuration.json"
+      },
       {
         "id": "sao",
         "aliases": [
@@ -55,8 +68,13 @@
     ],
     "grammars": [
       {
+        "language": "saola",
+        "scopeName": "text.html.saola",
+        "path": "./syntaxes/sao.tmLanguage.json"
+      },
+      {
         "language": "sao",
-        "scopeName": "text.html.php.blade",
+        "scopeName": "text.html.saola",
         "path": "./syntaxes/sao.tmLanguage.json",
         "embeddedLanguages": {
           "source.php": "php",

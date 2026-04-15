@@ -8,9 +8,9 @@
     userState = user,
     counter = 0,
     posts = [
-        {title: 'title 1', description: 'Mô tả 1'},
-        {title: 'title 2', description: 'Mô tả 2'},
-        {title: 'title 3', description: 'Mô tả 3'},
+    {title: 'title 1', description: 'Mô tả 1'},
+    {title: 'title 2', description: 'Mô tả 2'},
+    {title: 'title 3', description: 'Mô tả 3'},
     ]
 )
 @const([userAvatar, setAvatar] = useState(getUserAvatar(user)))
@@ -30,7 +30,7 @@
                     <a href="{{route('web.home')}}" title="{{siteinfo('site_name')}}">
                         <img src="{{asset('static/web/images/loho.png')}}" alt="{{siteinfo('site_name')}}" @class(['site-logo', 'has-login': userState]) />
                     </a>
-                    <ul @class(['site-menu'])>
+                    <ul @class("test", "test-demo": test)>
                         @foreach(posts as post)
                             <li class="menu-item nav-item">
                                 <a href="{{webPostUrl(post)}}" class="nav-link">

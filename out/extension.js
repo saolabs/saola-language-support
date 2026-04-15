@@ -660,7 +660,7 @@ function activate(context) {
     console.log('Template Languages extension is now active!');
     const saoFormatter = new saoFormatter_1.SaoFormatter();
     // Register document formatter (Format Document)
-    context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('sao', saoFormatter));
+    context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('sao', saoFormatter), vscode.languages.registerDocumentFormattingEditProvider('saola', saoFormatter));
     // Register range formatter (Format Selection)
     context.subscriptions.push(vscode.languages.registerDocumentRangeFormattingEditProvider('sao', {
         provideDocumentRangeFormattingEdits(document, range, options, _token) {
@@ -668,68 +668,23 @@ function activate(context) {
             // since Blade/HTML context requires full document awareness
             return [];
         }
+    }), vscode.languages.registerDocumentRangeFormattingEditProvider('saola', {
+        provideDocumentRangeFormattingEdits(document, range, options, _token) {
+            return [];
+        }
     }));
     // Register onType formatting for Enter key (proper indentation on new line)
     context.subscriptions.push(vscode.languages.registerOnTypeFormattingEditProvider('sao', {
         provideOnTypeFormattingEdits(document, position, ch, options, _token) {
-            if (ch !== '\n') {
-                return [];
-            }
-            const tabSize = options.tabSize || 4;
-            const insertSpaces = options.insertSpaces !== false;
-            const indent = insertSpaces ? ' '.repeat(tabSize) : '\t';
-            // Get the previous line (the line before where Enter was pressed)
-            const prevLineNum = position.line - 1;
-            if (prevLineNum < 0) {
-                return [];
-            }
-            const prevLine = document.lineAt(prevLineNum).text;
-            const prevTrimmed = prevLine.trim();
-            const currentLine = document.lineAt(position.line).text;
-            const currentTrimmed = currentLine.trim();
-            // Calculate previous line's indent level
-            let prevIndent = 0;
-            for (const char of prevLine) {
-                if (char === ' ') {
-                    prevIndent++;
-                }
-                else if (char === '\t') {
-                    prevIndent += tabSize;
-                }
-                else {
-                    break;
-                }
-            }
-            const prevIndentLevel = Math.floor(prevIndent / tabSize);
-            // Blade opening directives
-            const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment|states)\b/;
-            // HTML opening tag (not void, not self-closing, support custom tags)
-            const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
-            // Opening brace/bracket
-            const openBrace = /[\{\[]\s*$/;
-            let targetIndentLevel = prevIndentLevel;
-            if (openDirectives.test(prevTrimmed)) {
-                targetIndentLevel = prevIndentLevel + 1;
-            }
-            else if (htmlOpenTag.test(prevTrimmed)) {
-                targetIndentLevel = prevIndentLevel + 1;
-            }
-            else if (openBrace.test(prevTrimmed)) {
-                targetIndentLevel = prevIndentLevel + 1;
-            }
-            // If next line is a closing tag, don't increase indent
-            const closingDirective = /^@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endblock|endcomment)\b/;
-            if (closingDirective.test(currentTrimmed) || /^<\//.test(currentTrimmed)) {
-                // Don't change - let the language config handle it
-                return [];
-            }
-            const targetIndentStr = indent.repeat(targetIndentLevel);
-            const currentLineRange = new vscode.Range(new vscode.Position(position.line, 0), new vscode.Position(position.line, currentLine.length - currentTrimmed.length));
-            return [new vscode.TextEdit(currentLineRange, targetIndentStr)];
+            return _handleOnTypeFormatting(document, position, ch, options);
+        }
+    }, '\n'), vscode.languages.registerOnTypeFormattingEditProvider('saola', {
+        provideOnTypeFormattingEdits(document, position, ch, options, _token) {
+            return _handleOnTypeFormatting(document, position, ch, options);
         }
     }, '\n'));
     // Register autocomplete for directives (Blade + SAO)
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', new OneDirectiveCompletionProvider(), '@'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', new OneDirectiveCompletionProvider(), '@'), vscode.languages.registerCompletionItemProvider('saola', new OneDirectiveCompletionProvider(), '@'));
     // ── Variable Diagnostics ──────────────────────────────────────────────────
     const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
     context.subscriptions.push(varDiagnostics);
@@ -755,4 +710,60 @@ function activate(context) {
     }));
 }
 function deactivate() { }
+function _handleOnTypeFormatting(document, position, ch, options) {
+    if (ch !== '\n') {
+        return [];
+    }
+    const tabSize = options.tabSize || 4;
+    const insertSpaces = options.insertSpaces !== false;
+    const indent = insertSpaces ? ' '.repeat(tabSize) : '\t';
+    // Get the previous line (the line before where Enter was pressed)
+    const prevLineNum = position.line - 1;
+    if (prevLineNum < 0) {
+        return [];
+    }
+    const prevLine = document.lineAt(prevLineNum).text;
+    const prevTrimmed = prevLine.trim();
+    const currentLine = document.lineAt(position.line).text;
+    const currentTrimmed = currentLine.trim();
+    // Calculate previous line's indent level
+    let prevIndent = 0;
+    for (const char of prevLine) {
+        if (char === ' ') {
+            prevIndent++;
+        }
+        else if (char === '\t') {
+            prevIndent += tabSize;
+        }
+        else {
+            break;
+        }
+    }
+    const prevIndentLevel = Math.floor(prevIndent / tabSize);
+    // Blade opening directives
+    const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment|states)\b/;
+    // HTML opening tag (not void, not self-closing, support custom tags)
+    const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
+    // Opening brace/bracket
+    const openBrace = /[{\[]\s*$/;
+    let targetIndentLevel = prevIndentLevel;
+    if (openDirectives.test(prevTrimmed)) {
+        targetIndentLevel = prevIndentLevel + 1;
+    }
+    else if (htmlOpenTag.test(prevTrimmed)) {
+        targetIndentLevel = prevIndentLevel + 1;
+    }
+    else if (openBrace.test(prevTrimmed)) {
+        targetIndentLevel = prevIndentLevel + 1;
+    }
+    // If next line is a closing tag, don't increase indent
+    const closingDirective = /^@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endblock|endcomment)\b/;
+    if (closingDirective.test(currentTrimmed) || /^<\/ /.test(currentTrimmed)) {
+        // Don't change - let the language config handle it
+        return [];
+    }
+    const targetIndentStr = indent.repeat(targetIndentLevel);
+    const currentLineRange = new vscode.Range(new vscode.Position(position.line, 0), new vscode.Position(position.line, currentLine.length - currentTrimmed.length));
+    return [new vscode.TextEdit(currentLineRange, targetIndentStr)];
+}
 //# sourceMappingURL=extension.js.map

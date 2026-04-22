@@ -73,7 +73,7 @@
       "    $3",
       "@endforeach"
     ],
-    "description": "Modern foreach loop (no \$ prefix)"
+    "description": "Modern foreach loop (no \\$ prefix)"
   },
   "Template Wrapper": {
     "prefix": "sao:template",

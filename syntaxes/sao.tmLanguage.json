@@ -114,7 +114,7 @@
               "name": "support.function.construct.begin.blade"
             }
           },
-          "contentName": "meta.embedded.inline.php",
+          "contentName": "meta.embedded.inline.js",
           "end": "}}}",
           "endCaptures": {
             "0": {
@@ -135,7 +135,7 @@
               "name": "support.function.construct.begin.blade"
             }
           },
-          "contentName": "meta.embedded.inline.php",
+          "contentName": "meta.embedded.inline.js",
           "end": "!!}",
           "endCaptures": {
             "0": {
@@ -156,7 +156,7 @@
               "name": "support.function.construct.begin.blade"
             }
           },
-          "contentName": "meta.embedded.inline.php",
+          "contentName": "meta.embedded.inline.js",
           "end": "}}",
           "endCaptures": {
             "0": {
@@ -187,8 +187,11 @@
               "name": "punctuation.definition.arguments.end.blade"
             }
           },
-          "contentName": "meta.embedded.inline.php",
+          "contentName": "meta.embedded.inline.js",
           "patterns": [
+            {
+              "include": "#nested-parens"
+            },
             {
               "include": "#js-expr"
             }
@@ -211,8 +214,11 @@
               "name": "punctuation.definition.arguments.end.blade"
             }
           },
-          "contentName": "meta.embedded.inline.php",
+          "contentName": "meta.embedded.inline.js",
           "patterns": [
+            {
+              "include": "#nested-parens"
+            },
             {
               "include": "#js-expr"
             }
@@ -238,68 +244,78 @@
       "patterns": [
         {
           "match": "\\b(as)\\b",
-          "name": "keyword.control.as.php"
+          "name": "keyword.control.as.js"
         },
         {
           "match": "\\b(true|false|null|undefined)\\b",
-          "name": "constant.language.php"
+          "name": "constant.language.js"
         },
         {
           "match": "\\b(if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield)\\b",
-          "name": "keyword.control.php"
+          "name": "keyword.control.js"
         },
         {
           "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b(?=\\s*\\()",
-          "name": "support.function.php"
+          "name": "support.function.js"
         },
         {
           "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b(?=\\s*:)",
-          "name": "variable.other.readwrite.php"
+          "name": "variable.other.readwrite.js"
         },
         {
           "match": "\\.\\s*([a-zA-Z_$][a-zA-Z0-9_$]*)",
           "captures": {
             "1": {
-              "name": "variable.other.property.php"
+              "name": "variable.other.property.js"
             }
           }
         },
         {
           "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b",
-          "name": "variable.other.readwrite.php"
+          "name": "variable.other.readwrite.js"
         },
         {
           "match": "[\\[\\]]",
-          "name": "punctuation.section.bracket.php"
+          "name": "punctuation.section.bracket.js"
         },
         {
           "match": "[\\(\\)]",
-          "name": "punctuation.section.group.php"
+          "name": "punctuation.section.group.js"
         },
         {
           "match": "[\\{\\}]",
-          "name": "punctuation.section.block.php"
+          "name": "punctuation.section.block.js"
         },
         {
-          "match": "(===|!==|==|!=|<=|>=|<|>|&&|\\|\\||!|\\+|-|\\*|/|%|\\?|:|\\=|\\+\\=|-\\=|\\*\\=|/\\=|%\\=)",
-          "name": "keyword.operator.php"
+          "match": "(===|!==|==|!=|<=|>=|<|>|&&|\\|\\||!|\\+|-|\\*|/|%|\\?|:|\\=|\\+\\=|-\\=|\\*\\=|/\\=|%\\=|=>)",
+          "name": "keyword.operator.js"
         },
         {
           "match": "'(?:[^'\\\\]|\\\\.)*'",
-          "name": "string.quoted.single.php"
+          "name": "string.quoted.single.js"
         },
         {
           "match": "\"(?:[^\"\\\\]|\\\\.)*\"",
-          "name": "string.quoted.double.php"
+          "name": "string.quoted.double.js"
         },
         {
           "match": "`(?:[^`\\\\]|\\\\.)*`",
-          "name": "string.quoted.template.php"
+          "name": "string.quoted.template.js"
         },
         {
           "match": "\\b\\d+\\.?\\d*\\b",
-          "name": "constant.numeric.php"
+          "name": "constant.numeric.js"
         }
+      ]
+    },
+    "nested-parens": {
+      "begin": "\\(",
+      "beginCaptures": { "0": { "name": "punctuation.section.group.js" } },
+      "end": "\\)",
+      "endCaptures": { "0": { "name": "punctuation.section.group.js" } },
+      "patterns": [
+        { "include": "#nested-parens" },
+        { "include": "#js-expr" }
       ]
     },
     "php-expr": {
@@ -333,7 +349,7 @@
           "name": "constant.numeric.php"
         },
         {
-          "match": "(===|==|!=|!==|<=|>=|<|>|&&|\\|\\||and|or|xor|\\+|-|\\*|/|%|\\?|:)",
+          "match": "(===|==|!=|!==|<=|>=|<|>|&&|\\|\\||and|or|xor|\\+|-|\\*|/|%|\\?|:|=>)",
           "name": "keyword.operator.php"
         },
         {

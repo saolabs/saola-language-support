@@ -271,37 +271,37 @@ function _detectSaoMode(text: string): { mode: SaoMode, firstWrapperLine: number
 }
 
 function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void {
-  if (mode === 'legacy') {
-    const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
-    if (destructM) {
-      for (const m of destructM[1].matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
-      return;
+  // Match both $var = and var = to support mixed modes
+  const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
+  if (destructM) {
+    for (const m of destructM[1].matchAll(/\$?(\w+)/g)) {
+      vars.add(m[1]);
     }
-    for (const m of expr.matchAll(/\$(\w+)\s*=/g)) { vars.add(m[1]); }
-  } else {
-    // Modern: let x = 1, const [y, setY] = useState(0)
-    const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
-    if (destructM) {
-       for (const m of destructM[1].matchAll(/\w+/g)) { vars.add(m[0]); }
-       return;
-    }
-    for (const m of expr.matchAll(/(\w+)\s*=/g)) { vars.add(m[1]); }
+    return;
+  }
+  for (const m of expr.matchAll(/\$?(\w+)\s*=[^=]/g)) {
+    vars.add(m[1]);
   }
 }
 
 function _addDeclarationVars(content: string, vars: Set<string>, mode: SaoMode): void {
-  if (mode === 'legacy') {
-    const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
-    if (arrayM) {
-      _collectArrayKeys(arrayM[1], vars);
-      return;
-    }
-    for (const m of content.matchAll(/\$(\w+)/g)) { vars.add(m[1]); }
-  } else {
-    // Modern: @props(a, b = 1) or @vars(x, y)
-    for (const m of content.matchAll(/(\w+)/g)) {
-      vars.add(m[1]);
-    }
+  // Always check for object literal style first (e.g., @props({ key: val }))
+  if (content.trim().startsWith('{')) {
+    _addStates(content, vars);
+    return;
+  }
+
+  // Handle array style (e.g., @props(['key' => 'val']))
+  const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
+  if (arrayM) {
+    _collectArrayKeys(arrayM[1], vars);
+    return;
+  }
+
+  // Fallback: match all variable-like identifiers
+  // We match both $var and var to be safe across modes
+  for (const m of content.matchAll(/\$?(\w+)/g)) {
+    vars.add(m[1]);
   }
 }
 
@@ -497,20 +497,18 @@ function _collectDeclaredVars(text: string): Set<string> {
     if (t.match(/^@props\((.+)/))  { _addDeclarationVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     
     // Scoped loop vars
-    if (mode === 'legacy') {
-      let m: RegExpMatchArray | null;
-      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/))) {
-        vars.add(m[1]); vars.add(m[2]); continue;
-      }
-      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)/))) { vars.add(m[1]); continue; }
-      if ((m = t.match(/^@for\(\s*\$(\w+)\s*=/))) { vars.add(m[1]); continue; }
-    } else {
-      let m: RegExpMatchArray | null;
-      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)\s*,\s*(\w+)/))) {
-        vars.add(m[1]); vars.add(m[2]); continue;
-      }
-      if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)/))) { vars.add(m[1]); continue; }
-      if ((m = t.match(/^@for\(\s*(\w+)\s*=/))) { vars.add(m[1]); continue; }
+    let m: RegExpMatchArray | null;
+    // Handle @foreach(list as $key => $val) or @foreach(list as key => val)
+    if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$?(\w+)\s*(?:=>|,)\s*\$?(\w+)/))) {
+      vars.add(m[1]); vars.add(m[2]); continue;
+    }
+    // Handle @foreach(list as $item) or @foreach(list as item)
+    if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$?(\w+)/))) {
+      vars.add(m[1]); continue;
+    }
+    // Handle @for($i = 0; ...) or @for(i = 0; ...)
+    if ((m = t.match(/^@for\(\s*\$?(\w+)\s*=/))) {
+      vars.add(m[1]); continue;
     }
   }
   return vars;
@@ -583,13 +581,18 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
 
       if (LOOP_OPEN_RE.test(t)) {
         const newScope = new Set<string>();
-        const kvM = t.match(/\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/i);
-        if (kvM) { newScope.add(kvM[1]); newScope.add(kvM[2]); }
-        else {
-          const asM = t.match(/\bas\b\s+\$(\w+)/i);
+        // Handle @foreach(list as $key => $val) or @foreach(list as key => val)
+        const kvM = t.match(/\bas\b\s+\$?(\w+)\s*(?:=>|,)\s*\$?(\w+)/i);
+        if (kvM) {
+          newScope.add(kvM[1]);
+          newScope.add(kvM[2]);
+        } else {
+          // Handle @foreach(list as $item) or @foreach(list as item)
+          const asM = t.match(/\bas\b\s+\$?(\w+)/i);
           if (asM) { newScope.add(asM[1]); }
         }
-        const forM = t.match(/^@for\(\s*\$(\w+)\s*=/i);
+        // Handle @for($i = 0; ...) or @for(i = 0; ...)
+        const forM = t.match(/^@for\(\s*\$?(\w+)\s*=/i);
         if (forM) { newScope.add(forM[1]); }
         scopeStack.push(newScope);
       }

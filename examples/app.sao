@@ -14,6 +14,7 @@
     ]
 )
 @const([userAvatar, setAvatar] = useState(getUserAvatar(user)))
+
 <template>
     @extends(__template__ + 'main')
     @section('meta:type', 'article')
@@ -30,7 +31,7 @@
                     <a href="{{route('web.home')}}" title="{{siteinfo('site_name')}}">
                         <img src="{{asset('static/web/images/loho.png')}}" alt="{{siteinfo('site_name')}}" @class(['site-logo', 'has-login': userState]) />
                     </a>
-                    <ul @class("test", "test-demo": test)>
+                    <ul @class(['site-menu'])>
                         @foreach(posts as post)
                             <li class="menu-item nav-item">
                                 <a href="{{webPostUrl(post)}}" class="nav-link">
@@ -48,7 +49,7 @@
                                 {{--  --}}
                                 <li><a href="{{route('web.account')}}">{{text('web.account.dashboard')}}</a></li>
                                 <li><a href="{{route('web.account.profile')}}">{{text('web.account.profile')}}</a></li>
-                                <li><a href="{{route('web.account.change-avatar')}}" @click(changeAvatar())>{{text('web.account.change-avatar')}}</a></li>
+                                <li><a href="{{route('web.account.change-avatar')}}" @click(changeAvatar(event))>{{text('web.account.change-avatar')}}</a></li>
                                 <li><a href="{{route('web.account.signout')}}" @click(signout())>{{text('web.account.signout')}}</a></li>
                             </ul>
                         @else

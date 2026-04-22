@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.8.6",
+  "version": "1.9.0",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
@@ -113,13 +113,26 @@
         "editor.insertSpaces": true,
         "editor.autoClosingBrackets": "always",
         "editor.autoClosingTags": true,
-        "editor.linkedEditing": true,
-        "emmet.includeLanguages": {
-          "sao": "html"
-        },
-        "emmet.showAbbreviationSuggestions": true,
-        "emmet.showExpandedAbbreviation": "always"
-      }
+        "editor.linkedEditing": true
+      },
+      "[saola]": {
+        "editor.defaultFormatter": "saolabs.saola-language-support",
+        "editor.formatOnSave": true,
+        "editor.autoIndent": "full",
+        "editor.tabSize": 4,
+        "editor.formatOnType": true,
+        "editor.insertSpaces": true,
+        "editor.autoClosingBrackets": "always",
+        "editor.autoClosingTags": true,
+        "editor.linkedEditing": true
+      },
+      "emmet.includeLanguages": {
+        "sao": "html",
+        "saola": "html"
+      },
+      "emmet.showAbbreviationSuggestions": true,
+      "emmet.showExpandedAbbreviation": "always",
+      "emmet.triggerExpansionOnTab": true
     }
   },
   "scripts": {
@@ -136,6 +149,9 @@
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "@vscode/emmet-helper": "^2.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

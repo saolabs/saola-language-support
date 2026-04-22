@@ -37,6 +37,161 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const saoFormatter_1 = require("./formatters/saoFormatter");
+const emmet_helper_1 = require("@vscode/emmet-helper");
+const vscode_languageserver_textdocument_1 = require("vscode-languageserver-textdocument");
+// =============================================
+// Emmet Completion Provider for Saola templates
+// =============================================
+/**
+ * Determines if the cursor position is in an HTML markup context
+ * where Emmet abbreviations should be expanded.
+ * Returns false for: @directive() args, {{ }}, <script>, <style>, etc.
+ */
+function _isInHtmlContext(document, position) {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    const lineText = document.lineAt(position.line).text;
+    const beforeCursor = lineText.substring(0, position.character);
+    // Skip if line starts with @ directive (outside HTML context)
+    const trimmedLine = lineText.trim();
+    if (/^@\w+/.test(trimmedLine) && !trimmedLine.match(/^@(end\w+|else|elseif|case|default|break|continue|empty|csrf)\b/)) {
+        // This is a directive line - but check if we're after the directive's closing paren
+        const directiveMatch = lineText.match(/@\w+\s*\([^)]*\)\s*/);
+        if (directiveMatch) {
+            const afterDirective = (lineText.indexOf(directiveMatch[0]) + directiveMatch[0].length);
+            if (position.character < afterDirective) {
+                return false; // Inside directive args
+            }
+            // After directive args - could be HTML content on same line
+        }
+        else if (lineText.match(/@\w+\s*\(/)) {
+            // Opening paren but no closing - inside multi-line directive args
+            return false;
+        }
+    }
+    // Check if inside {{ }}, {!! !!}, {{{ }}} blocks
+    const textBefore = text.substring(0, offset);
+    // Check for unclosed {{ (not inside a Blade echo)
+    const lastDoubleBraceOpen = textBefore.lastIndexOf('{{');
+    if (lastDoubleBraceOpen >= 0) {
+        const afterOpen = text.substring(lastDoubleBraceOpen);
+        const closeMatch = afterOpen.match(/\}\}|--\}\}/);
+        if (!closeMatch || (lastDoubleBraceOpen + closeMatch.index) > offset) {
+            // Check it's not a comment opening {{--
+            if (text[lastDoubleBraceOpen + 2] !== '-') {
+                return false;
+            }
+        }
+    }
+    // Check for unclosed {!!
+    const lastUnescapedOpen = textBefore.lastIndexOf('{!!');
+    if (lastUnescapedOpen >= 0) {
+        const afterOpen = text.substring(lastUnescapedOpen);
+        const closeIdx = afterOpen.indexOf('!!}');
+        if (closeIdx < 0 || (lastUnescapedOpen + closeIdx) > offset) {
+            return false;
+        }
+    }
+    // Check if inside <script> or <style> blocks
+    const scriptStyleRe = /<(script|style)\b[^>]*>/gi;
+    let match;
+    while ((match = scriptStyleRe.exec(text)) !== null) {
+        const openEnd = match.index + match[0].length;
+        const tag = match[1].toLowerCase();
+        const closeRe = new RegExp(`</${tag}\\s*>`, 'i');
+        const closeMatch = closeRe.exec(text.substring(openEnd));
+        if (closeMatch) {
+            const closeStart = openEnd + closeMatch.index;
+            if (offset > openEnd && offset < closeStart) {
+                return false;
+            }
+        }
+        else if (offset > openEnd) {
+            return false; // Unclosed script/style tag
+        }
+    }
+    // Check if inside @directive(...) arguments (multi-line aware)
+    // Walk backwards to find if we're inside a directive's parens
+    let parenDepth = 0;
+    let inDirectiveArgs = false;
+    for (let i = offset - 1; i >= 0; i--) {
+        const ch = text[i];
+        if (ch === ')') {
+            parenDepth++;
+        }
+        else if (ch === '(') {
+            if (parenDepth === 0) {
+                // Check if this paren is preceded by a @directive
+                const preceding = text.substring(Math.max(0, i - 30), i);
+                if (/@\w+\s*$/.test(preceding)) {
+                    inDirectiveArgs = true;
+                }
+                break;
+            }
+            parenDepth--;
+        }
+    }
+    if (inDirectiveArgs) {
+        return false;
+    }
+    // Check if the abbreviation text looks like an Emmet pattern
+    // Skip pure text/word that looks like a regular attribute value
+    const word = beforeCursor.match(/[\w.#>+*^()[\]{}:$!@-]+$/);
+    if (!word) {
+        return false;
+    }
+    // Don't trigger on lines that look like they're inside attribute values
+    // e.g. class="something"
+    const quotesBefore = (beforeCursor.match(/"/g) || []).length;
+    if (quotesBefore % 2 !== 0) {
+        return false; // Inside a quoted attribute value
+    }
+    const singleQuotesBefore = (beforeCursor.match(/'/g) || []).length;
+    if (singleQuotesBefore % 2 !== 0) {
+        return false;
+    }
+    return true;
+}
+function _getEmmetConfiguration() {
+    const emmetConfig = vscode.workspace.getConfiguration('emmet');
+    return {
+        showExpandedAbbreviation: emmetConfig.get('showExpandedAbbreviation') || 'always',
+        showAbbreviationSuggestions: emmetConfig.get('showAbbreviationSuggestions') ?? true,
+        syntaxProfiles: emmetConfig.get('syntaxProfiles') || {},
+        variables: emmetConfig.get('variables') || {},
+        preferences: emmetConfig.get('preferences') || {},
+        excludeLanguages: emmetConfig.get('excludeLanguages') || [],
+        showSuggestionsAsSnippets: emmetConfig.get('showSuggestionsAsSnippets') ?? false,
+    };
+}
+class SaoEmmetCompletionProvider {
+    provideCompletionItems(document, position, _token, _context) {
+        // Only provide Emmet in HTML-like contexts
+        if (!_isInHtmlContext(document, position)) {
+            return undefined;
+        }
+        const syntax = 'html';
+        const emmetConfig = _getEmmetConfiguration();
+        // Convert to LSP TextDocument
+        const lsDoc = vscode_languageserver_textdocument_1.TextDocument.create(document.uri.toString(), document.languageId, document.version, document.getText());
+        const result = (0, emmet_helper_1.doComplete)(lsDoc, position, syntax, emmetConfig);
+        if (!result || !result.items.length) {
+            return undefined;
+        }
+        const completionItems = result.items.map((item) => {
+            const ci = new vscode.CompletionItem(item.label, vscode.CompletionItemKind.Snippet);
+            ci.documentation = item.documentation;
+            ci.detail = item.detail || 'Emmet Abbreviation';
+            ci.insertText = new vscode.SnippetString(item.textEdit.newText);
+            ci.filterText = item.filterText;
+            ci.sortText = item.sortText;
+            const range = item.textEdit.range;
+            ci.range = new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
+            return ci;
+        });
+        return new vscode.CompletionList(completionItems, true);
+    }
+}
 const BLADE_DIRECTIVES = [
     // === Laravel Blade - Control Flow ===
     { label: '@if', detail: 'Conditional if statement', insertText: '@if(${1:condition})\n\t$0\n@endif' },
@@ -265,48 +420,34 @@ function _detectSaoMode(text) {
     return { mode: 'modern', firstWrapperLine: -1 };
 }
 function _addAssignedVars(expr, vars, mode) {
-    if (mode === 'legacy') {
-        const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
-        if (destructM) {
-            for (const m of destructM[1].matchAll(/\$(\w+)/g)) {
-                vars.add(m[1]);
-            }
-            return;
-        }
-        for (const m of expr.matchAll(/\$(\w+)\s*=/g)) {
+    // Match both $var = and var = to support mixed modes
+    const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
+    if (destructM) {
+        for (const m of destructM[1].matchAll(/\$?(\w+)/g)) {
             vars.add(m[1]);
         }
+        return;
     }
-    else {
-        // Modern: let x = 1, const [y, setY] = useState(0)
-        const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
-        if (destructM) {
-            for (const m of destructM[1].matchAll(/\w+/g)) {
-                vars.add(m[0]);
-            }
-            return;
-        }
-        for (const m of expr.matchAll(/(\w+)\s*=/g)) {
-            vars.add(m[1]);
-        }
+    for (const m of expr.matchAll(/\$?(\w+)\s*=[^=]/g)) {
+        vars.add(m[1]);
     }
 }
 function _addDeclarationVars(content, vars, mode) {
-    if (mode === 'legacy') {
-        const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
-        if (arrayM) {
-            _collectArrayKeys(arrayM[1], vars);
-            return;
-        }
-        for (const m of content.matchAll(/\$(\w+)/g)) {
-            vars.add(m[1]);
-        }
+    // Always check for object literal style first (e.g., @props({ key: val }))
+    if (content.trim().startsWith('{')) {
+        _addStates(content, vars);
+        return;
     }
-    else {
-        // Modern: @props(a, b = 1) or @vars(x, y)
-        for (const m of content.matchAll(/(\w+)/g)) {
-            vars.add(m[1]);
-        }
+    // Handle array style (e.g., @props(['key' => 'val']))
+    const arrayM = content.match(/^\s*\[([\s\S]*)\]\s*$/);
+    if (arrayM) {
+        _collectArrayKeys(arrayM[1], vars);
+        return;
+    }
+    // Fallback: match all variable-like identifiers
+    // We match both $var and var to be safe across modes
+    for (const m of content.matchAll(/\$?(\w+)/g)) {
+        vars.add(m[1]);
     }
 }
 function _addStates(content, vars) {
@@ -498,37 +639,22 @@ function _collectDeclaredVars(text) {
             continue;
         }
         // Scoped loop vars
-        if (mode === 'legacy') {
-            let m;
-            if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/))) {
-                vars.add(m[1]);
-                vars.add(m[2]);
-                continue;
-            }
-            if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$(\w+)/))) {
-                vars.add(m[1]);
-                continue;
-            }
-            if ((m = t.match(/^@for\(\s*\$(\w+)\s*=/))) {
-                vars.add(m[1]);
-                continue;
-            }
+        let m;
+        // Handle @foreach(list as $key => $val) or @foreach(list as key => val)
+        if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$?(\w+)\s*(?:=>|,)\s*\$?(\w+)/))) {
+            vars.add(m[1]);
+            vars.add(m[2]);
+            continue;
         }
-        else {
-            let m;
-            if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)\s*,\s*(\w+)/))) {
-                vars.add(m[1]);
-                vars.add(m[2]);
-                continue;
-            }
-            if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+(\w+)/))) {
-                vars.add(m[1]);
-                continue;
-            }
-            if ((m = t.match(/^@for\(\s*(\w+)\s*=/))) {
-                vars.add(m[1]);
-                continue;
-            }
+        // Handle @foreach(list as $item) or @foreach(list as item)
+        if ((m = t.match(/^@fo(?:reach|relse)\(.+\bas\b\s+\$?(\w+)/))) {
+            vars.add(m[1]);
+            continue;
+        }
+        // Handle @for($i = 0; ...) or @for(i = 0; ...)
+        if ((m = t.match(/^@for\(\s*\$?(\w+)\s*=/))) {
+            vars.add(m[1]);
+            continue;
         }
     }
     return vars;
@@ -590,18 +716,21 @@ function _runAnalysis(document, collection) {
             }
             if (LOOP_OPEN_RE.test(t)) {
                 const newScope = new Set();
-                const kvM = t.match(/\bas\b\s+\$(\w+)\s*=>\s*\$(\w+)/i);
+                // Handle @foreach(list as $key => $val) or @foreach(list as key => val)
+                const kvM = t.match(/\bas\b\s+\$?(\w+)\s*(?:=>|,)\s*\$?(\w+)/i);
                 if (kvM) {
                     newScope.add(kvM[1]);
                     newScope.add(kvM[2]);
                 }
                 else {
-                    const asM = t.match(/\bas\b\s+\$(\w+)/i);
+                    // Handle @foreach(list as $item) or @foreach(list as item)
+                    const asM = t.match(/\bas\b\s+\$?(\w+)/i);
                     if (asM) {
                         newScope.add(asM[1]);
                     }
                 }
-                const forM = t.match(/^@for\(\s*\$(\w+)\s*=/i);
+                // Handle @for($i = 0; ...) or @for(i = 0; ...)
+                const forM = t.match(/^@for\(\s*\$?(\w+)\s*=/i);
                 if (forM) {
                     newScope.add(forM[1]);
                 }
@@ -658,6 +787,8 @@ function _runAnalysis(document, collection) {
 }
 function activate(context) {
     console.log('Template Languages extension is now active!');
+    // ── Ensure Emmet is configured for SAO language IDs ──────────────────────
+    _ensureEmmetConfig();
     const saoFormatter = new saoFormatter_1.SaoFormatter();
     // Register document formatter (Format Document)
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('sao', saoFormatter), vscode.languages.registerDocumentFormattingEditProvider('saola', saoFormatter));
@@ -685,6 +816,11 @@ function activate(context) {
     }, '\n'));
     // Register autocomplete for directives (Blade + SAO)
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', new OneDirectiveCompletionProvider(), '@'), vscode.languages.registerCompletionItemProvider('saola', new OneDirectiveCompletionProvider(), '@'));
+    // ── Emmet HTML Completion Provider ──────────────────────────────────────
+    // Provides context-aware HTML Emmet abbreviation expansion
+    // e.g. div#test.demo → <div id="test" class="demo"></div>
+    const emmetProvider = new SaoEmmetCompletionProvider();
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', emmetProvider, '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'), vscode.languages.registerCompletionItemProvider('saola', emmetProvider, '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'));
     // ── Variable Diagnostics ──────────────────────────────────────────────────
     const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
     context.subscriptions.push(varDiagnostics);
@@ -710,6 +846,35 @@ function activate(context) {
     }));
 }
 function deactivate() { }
+/**
+ * Ensures emmet.includeLanguages has sao and saola mapped to html.
+ * This is a safety net — package.json configurationDefaults should set this,
+ * but if the user has manually overridden emmet.includeLanguages without
+ * including sao/saola, we add them programmatically.
+ */
+function _ensureEmmetConfig() {
+    try {
+        const config = vscode.workspace.getConfiguration('emmet');
+        const includeLanguages = config.get('includeLanguages') || {};
+        let needsUpdate = false;
+        const updated = { ...includeLanguages };
+        if (!updated['sao']) {
+            updated['sao'] = 'html';
+            needsUpdate = true;
+        }
+        if (!updated['saola']) {
+            updated['saola'] = 'html';
+            needsUpdate = true;
+        }
+        if (needsUpdate) {
+            config.update('includeLanguages', updated, vscode.ConfigurationTarget.Global);
+        }
+    }
+    catch (err) {
+        // Silently ignore — Emmet will still work via the custom completion provider
+        console.warn('Failed to update emmet.includeLanguages:', err);
+    }
+}
 function _handleOnTypeFormatting(document, position, ch, options) {
     if (ch !== '\n') {
         return [];

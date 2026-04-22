@@ -1,5 +1,190 @@
 import * as vscode from 'vscode';
 import { SaoFormatter } from './formatters/saoFormatter';
+import { doComplete, VSCodeEmmetConfig } from '@vscode/emmet-helper';
+import { TextDocument as LSTextDocument } from 'vscode-languageserver-textdocument';
+
+// =============================================
+// Emmet Completion Provider for Saola templates
+// =============================================
+
+/**
+ * Determines if the cursor position is in an HTML markup context
+ * where Emmet abbreviations should be expanded.
+ * Returns false for: @directive() args, {{ }}, <script>, <style>, etc.
+ */
+function _isInHtmlContext(document: vscode.TextDocument, position: vscode.Position): boolean {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const lineText = document.lineAt(position.line).text;
+  const beforeCursor = lineText.substring(0, position.character);
+
+  // Skip if line starts with @ directive (outside HTML context)
+  const trimmedLine = lineText.trim();
+  if (/^@\w+/.test(trimmedLine) && !trimmedLine.match(/^@(end\w+|else|elseif|case|default|break|continue|empty|csrf)\b/)) {
+    // This is a directive line - but check if we're after the directive's closing paren
+    const directiveMatch = lineText.match(/@\w+\s*\([^)]*\)\s*/);
+    if (directiveMatch) {
+      const afterDirective = (lineText.indexOf(directiveMatch[0]) + directiveMatch[0].length);
+      if (position.character < afterDirective) {
+        return false; // Inside directive args
+      }
+      // After directive args - could be HTML content on same line
+    } else if (lineText.match(/@\w+\s*\(/)) {
+      // Opening paren but no closing - inside multi-line directive args
+      return false;
+    }
+  }
+
+  // Check if inside {{ }}, {!! !!}, {{{ }}} blocks
+  const textBefore = text.substring(0, offset);
+  
+  // Check for unclosed {{ (not inside a Blade echo)
+  const lastDoubleBraceOpen = textBefore.lastIndexOf('{{');
+  if (lastDoubleBraceOpen >= 0) {
+    const afterOpen = text.substring(lastDoubleBraceOpen);
+    const closeMatch = afterOpen.match(/\}\}|--\}\}/);
+    if (!closeMatch || (lastDoubleBraceOpen + closeMatch.index!) > offset) {
+      // Check it's not a comment opening {{--
+      if (text[lastDoubleBraceOpen + 2] !== '-') {
+        return false;
+      }
+    }
+  }
+
+  // Check for unclosed {!!
+  const lastUnescapedOpen = textBefore.lastIndexOf('{!!');
+  if (lastUnescapedOpen >= 0) {
+    const afterOpen = text.substring(lastUnescapedOpen);
+    const closeIdx = afterOpen.indexOf('!!}');
+    if (closeIdx < 0 || (lastUnescapedOpen + closeIdx) > offset) {
+      return false;
+    }
+  }
+
+  // Check if inside <script> or <style> blocks
+  const scriptStyleRe = /<(script|style)\b[^>]*>/gi;
+  let match;
+  while ((match = scriptStyleRe.exec(text)) !== null) {
+    const openEnd = match.index + match[0].length;
+    const tag = match[1].toLowerCase();
+    const closeRe = new RegExp(`</${tag}\\s*>`, 'i');
+    const closeMatch = closeRe.exec(text.substring(openEnd));
+    if (closeMatch) {
+      const closeStart = openEnd + closeMatch.index;
+      if (offset > openEnd && offset < closeStart) {
+        return false;
+      }
+    } else if (offset > openEnd) {
+      return false; // Unclosed script/style tag
+    }
+  }
+
+  // Check if inside @directive(...) arguments (multi-line aware)
+  // Walk backwards to find if we're inside a directive's parens
+  let parenDepth = 0;
+  let inDirectiveArgs = false;
+  for (let i = offset - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (ch === ')') {
+      parenDepth++;
+    } else if (ch === '(') {
+      if (parenDepth === 0) {
+        // Check if this paren is preceded by a @directive
+        const preceding = text.substring(Math.max(0, i - 30), i);
+        if (/@\w+\s*$/.test(preceding)) {
+          inDirectiveArgs = true;
+        }
+        break;
+      }
+      parenDepth--;
+    }
+  }
+  if (inDirectiveArgs) {
+    return false;
+  }
+
+  // Check if the abbreviation text looks like an Emmet pattern
+  // Skip pure text/word that looks like a regular attribute value
+  const word = beforeCursor.match(/[\w.#>+*^()[\]{}:$!@-]+$/);
+  if (!word) {
+    return false;
+  }
+
+  // Don't trigger on lines that look like they're inside attribute values
+  // e.g. class="something"
+  const quotesBefore = (beforeCursor.match(/"/g) || []).length;
+  if (quotesBefore % 2 !== 0) {
+    return false; // Inside a quoted attribute value
+  }
+  const singleQuotesBefore = (beforeCursor.match(/'/g) || []).length;
+  if (singleQuotesBefore % 2 !== 0) {
+    return false;
+  }
+
+  return true;
+}
+
+function _getEmmetConfiguration(): VSCodeEmmetConfig {
+  const emmetConfig = vscode.workspace.getConfiguration('emmet');
+  return {
+    showExpandedAbbreviation: emmetConfig.get<string>('showExpandedAbbreviation') || 'always',
+    showAbbreviationSuggestions: emmetConfig.get<boolean>('showAbbreviationSuggestions') ?? true,
+    syntaxProfiles: emmetConfig.get<object>('syntaxProfiles') || {},
+    variables: emmetConfig.get<object>('variables') || {},
+    preferences: emmetConfig.get<object>('preferences') || {},
+    excludeLanguages: emmetConfig.get<string[]>('excludeLanguages') || [],
+    showSuggestionsAsSnippets: emmetConfig.get<boolean>('showSuggestionsAsSnippets') ?? false,
+  };
+}
+
+class SaoEmmetCompletionProvider implements vscode.CompletionItemProvider {
+  provideCompletionItems(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    _token: vscode.CancellationToken,
+    _context: vscode.CompletionContext
+  ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+    // Only provide Emmet in HTML-like contexts
+    if (!_isInHtmlContext(document, position)) {
+      return undefined;
+    }
+
+    const syntax = 'html';
+    const emmetConfig = _getEmmetConfiguration();
+
+    // Convert to LSP TextDocument
+    const lsDoc = LSTextDocument.create(
+      document.uri.toString(),
+      document.languageId,
+      document.version,
+      document.getText()
+    );
+
+    const result = doComplete(lsDoc, position, syntax, emmetConfig);
+    if (!result || !result.items.length) {
+      return undefined;
+    }
+
+    const completionItems: vscode.CompletionItem[] = result.items.map((item: any) => {
+      const ci = new vscode.CompletionItem(item.label, vscode.CompletionItemKind.Snippet);
+      ci.documentation = item.documentation;
+      ci.detail = item.detail || 'Emmet Abbreviation';
+      ci.insertText = new vscode.SnippetString(item.textEdit.newText);
+      ci.filterText = item.filterText;
+      ci.sortText = item.sortText;
+
+      const range = item.textEdit.range;
+      ci.range = new vscode.Range(
+        range.start.line, range.start.character,
+        range.end.line, range.end.character
+      );
+
+      return ci;
+    });
+
+    return new vscode.CompletionList(completionItems, true);
+  }
+}
 
 const BLADE_DIRECTIVES = [
   // === Laravel Blade - Control Flow ===
@@ -646,6 +831,10 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
 export function activate(context: vscode.ExtensionContext) {
   console.log('Template Languages extension is now active!');
 
+  // ── Ensure Emmet is configured for SAO language IDs ──────────────────────
+  _ensureEmmetConfig();
+
+
   const saoFormatter = new SaoFormatter();
 
   // Register document formatter (Format Document)
@@ -720,6 +909,23 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // ── Emmet HTML Completion Provider ──────────────────────────────────────
+  // Provides context-aware HTML Emmet abbreviation expansion
+  // e.g. div#test.demo → <div id="test" class="demo"></div>
+  const emmetProvider = new SaoEmmetCompletionProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      'sao',
+      emmetProvider,
+      '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'
+    ),
+    vscode.languages.registerCompletionItemProvider(
+      'saola',
+      emmetProvider,
+      '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'
+    )
+  );
+
   // ── Variable Diagnostics ──────────────────────────────────────────────────
   const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
   context.subscriptions.push(varDiagnostics);
@@ -754,6 +960,38 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
+
+/**
+ * Ensures emmet.includeLanguages has sao and saola mapped to html.
+ * This is a safety net — package.json configurationDefaults should set this,
+ * but if the user has manually overridden emmet.includeLanguages without
+ * including sao/saola, we add them programmatically.
+ */
+function _ensureEmmetConfig(): void {
+  try {
+    const config = vscode.workspace.getConfiguration('emmet');
+    const includeLanguages = config.get<Record<string, string>>('includeLanguages') || {};
+
+    let needsUpdate = false;
+    const updated: Record<string, string> = { ...includeLanguages };
+
+    if (!updated['sao']) {
+      updated['sao'] = 'html';
+      needsUpdate = true;
+    }
+    if (!updated['saola']) {
+      updated['saola'] = 'html';
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      config.update('includeLanguages', updated, vscode.ConfigurationTarget.Global);
+    }
+  } catch (err) {
+    // Silently ignore — Emmet will still work via the custom completion provider
+    console.warn('Failed to update emmet.includeLanguages:', err);
+  }
+}
 
 function _handleOnTypeFormatting(
   document: vscode.TextDocument,

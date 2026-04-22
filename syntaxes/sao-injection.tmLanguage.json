@@ -1,73 +1,143 @@
 {
-  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "scopeName": "text.html.saola.injection",
-  "injectionSelector": "L:meta.tag -comment.block.blade, L:string.quoted -comment.block.blade",
-  "patterns": [
-    {
-      "comment": "Blade comment {{-- --}}",
-      "begin": "{{--",
-      "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.blade" } },
-      "end": "--}}",
-      "endCaptures": { "0": { "name": "punctuation.definition.comment.end.blade" } },
-      "name": "comment.block.blade"
-    },
-    {
-      "comment": "Blade echo {{{ expr }}}",
-      "begin": "(?<!@){{{",
-      "beginCaptures": { "0": { "name": "support.function.construct.begin.blade" } },
-      "end": "}}}",
-      "endCaptures": { "0": { "name": "support.function.construct.end.blade" } },
-      "contentName": "meta.embedded.inline.js",
-      "name": "meta.function.echo.blade",
-      "patterns": [{ "include": "text.html.saola#js-expr" }]
-    },
-    {
-      "comment": "Blade unescaped echo {!! expr !!}",
-      "begin": "(?<!@){!!",
-      "beginCaptures": { "0": { "name": "support.function.construct.begin.blade" } },
-      "end": "!!}",
-      "endCaptures": { "0": { "name": "support.function.construct.end.blade" } },
-      "contentName": "meta.embedded.inline.js",
-      "name": "meta.function.echo.blade",
-      "patterns": [{ "include": "text.html.saola#js-expr" }]
-    },
-    {
-      "comment": "Blade echo {{ expr }}",
-      "begin": "(?<![@{]){{",
-      "beginCaptures": { "0": { "name": "support.function.construct.begin.blade" } },
-      "end": "}}",
-      "endCaptures": { "0": { "name": "support.function.construct.end.blade" } },
-      "contentName": "meta.embedded.inline.js",
-      "name": "meta.function.echo.blade",
-      "patterns": [{ "include": "text.html.saola#js-expr" }]
-    },
-    {
-      "comment": "Directive with args inside HTML tags - @class(), @style(), @attr(), etc.",
-      "begin": "(?<![A-Za-z0-9_@])(@(?:class|style|checked|selected|disabled|readonly|required|attr|show|bind|exec|import|if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await))\\s*(\\()",
-      "beginCaptures": {
-        "1": { "name": "keyword.blade" },
-        "2": { "name": "punctuation.definition.arguments.begin.blade" }
-      },
-      "end": "\\)",
-      "endCaptures": {
-        "0": { "name": "punctuation.definition.arguments.end.blade" }
-      },
-      "contentName": "meta.embedded.inline.js",
-      "patterns": [{ "include": "text.html.saola#nested-parens" }, { "include": "text.html.saola#js-expr" }]
-    },
-    {
-      "comment": "Event directive with args inside HTML tags - @click(), @change(), etc.",
-      "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave))\\s*(\\()",
-      "beginCaptures": {
-        "1": { "name": "keyword.control.event.blade" },
-        "2": { "name": "punctuation.definition.arguments.begin.blade" }
-      },
-      "end": "\\)",
-      "endCaptures": {
-        "0": { "name": "punctuation.definition.arguments.end.blade" }
-      },
-      "contentName": "meta.embedded.inline.js",
-      "patterns": [{ "include": "text.html.saola#nested-parens" }, { "include": "text.html.saola#js-expr" }]
-    }
-  ]
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "scopeName": "text.html.saola.injection",
+    "injectionSelector": "L:meta.tag -comment.block.blade, L:string.quoted -comment.block.blade",
+    "patterns": [
+        {
+            "comment": "Blade comment {{-- --}}",
+            "begin": "{{--",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.begin.blade"
+                }
+            },
+            "end": "--}}",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.end.blade"
+                }
+            },
+            "name": "comment.block.blade"
+        },
+        {
+            "comment": "Blade echo {{{ expr }}}",
+            "begin": "(?<!@){{{",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.function.construct.begin.blade"
+                }
+            },
+            "end": "}}}",
+            "endCaptures": {
+                "0": {
+                    "name": "support.function.construct.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "name": "meta.function.echo.blade",
+            "patterns": [
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Blade unescaped echo {!! expr !!}",
+            "begin": "(?<!@){!!",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.function.construct.begin.blade"
+                }
+            },
+            "end": "!!}",
+            "endCaptures": {
+                "0": {
+                    "name": "support.function.construct.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "name": "meta.function.echo.blade",
+            "patterns": [
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Blade echo {{ expr }}",
+            "begin": "(?<![@{]){{",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.function.construct.begin.blade"
+                }
+            },
+            "end": "}}",
+            "endCaptures": {
+                "0": {
+                    "name": "support.function.construct.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "name": "meta.function.echo.blade",
+            "patterns": [
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Directive with args inside HTML tags - @class(), @style(), @attr(), etc.",
+            "begin": "(?<![A-Za-z0-9_@])(@(?:class|style|checked|selected|disabled|readonly|required|attr|show|bind|exec|import|if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await))\\s*(\\()",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.blade"
+                },
+                "2": {
+                    "name": "punctuation.definition.arguments.begin.blade"
+                }
+            },
+            "end": "\\)",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.arguments.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
+                {
+                    "include": "text.html.saola#nested-parens"
+                },
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Event directive with args inside HTML tags - @click(), @change(), etc.",
+            "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave))\\s*(\\()",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.event.blade"
+                },
+                "2": {
+                    "name": "punctuation.definition.arguments.begin.blade"
+                }
+            },
+            "end": "\\)",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.arguments.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
+                {
+                    "include": "text.html.saola#nested-parens"
+                },
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        }
+    ]
 }

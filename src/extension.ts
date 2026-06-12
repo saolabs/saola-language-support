@@ -962,36 +962,48 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 /**
- * Ensures emmet.includeLanguages has sao and saola mapped to html.
- * This is a safety net — package.json configurationDefaults should set this,
- * but if the user has manually overridden emmet.includeLanguages without
- * including sao/saola, we add them programmatically.
+ * Ensures all Emmet settings are correctly configured for Saola files.
+ * 
+ * Three settings are critical for Emmet to work in mapped (custom) languages:
+ * 1. emmet.includeLanguages — maps sao/saola to html
+ * 2. emmet.showExpandedAbbreviation — MUST be 'always' for mapped languages
+ *    (VS Code's built-in Emmet skips mapped languages unless this is 'always')
+ * 3. emmet.triggerExpansionOnTab — enables Tab key to expand abbreviations
  */
 function _ensureEmmetConfig(): void {
   try {
     const config = vscode.workspace.getConfiguration('emmet');
+
+    // 1. Ensure includeLanguages has sao/saola → html mapping
     const includeLanguages = config.get<Record<string, string>>('includeLanguages') || {};
-
-    let needsUpdate = false;
-    const updated: Record<string, string> = { ...includeLanguages };
-
-    if (!updated['sao']) {
-      updated['sao'] = 'html';
-      needsUpdate = true;
-    }
-    if (!updated['saola']) {
-      updated['saola'] = 'html';
-      needsUpdate = true;
-    }
-
-    if (needsUpdate) {
+    if (!includeLanguages['sao'] || !includeLanguages['saola']) {
+      const updated = { ...includeLanguages };
+      if (!updated['sao'])   { updated['sao']   = 'html'; }
+      if (!updated['saola']) { updated['saola'] = 'html'; }
       config.update('includeLanguages', updated, vscode.ConfigurationTarget.Global);
     }
+
+    // 2. Ensure showExpandedAbbreviation is 'always'
+    // The default value 'inMarkupAndStylesheetFilesOnly' causes VS Code's built-in Emmet
+    // to skip languages that are only mapped via includeLanguages (not native Emmet modes).
+    // See: vscode/extensions/emmet/src/defaultCompletionProvider.ts line ~60
+    const showExpanded = config.get<string>('showExpandedAbbreviation');
+    if (showExpanded !== 'always') {
+      config.update('showExpandedAbbreviation', 'always', vscode.ConfigurationTarget.Global);
+    }
+
+    // 3. Ensure triggerExpansionOnTab is enabled
+    // Without this, pressing Tab only inserts a tab character instead of expanding Emmet abbreviations.
+    const triggerOnTab = config.get<boolean>('triggerExpansionOnTab');
+    if (triggerOnTab !== true) {
+      config.update('triggerExpansionOnTab', true, vscode.ConfigurationTarget.Global);
+    }
+
   } catch (err) {
-    // Silently ignore — Emmet will still work via the custom completion provider
-    console.warn('Failed to update emmet.includeLanguages:', err);
+    console.warn('Saola: Failed to update Emmet configuration:', err);
   }
 }
+
 
 function _handleOnTypeFormatting(
   document: vscode.TextDocument,

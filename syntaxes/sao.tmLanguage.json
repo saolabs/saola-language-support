@@ -3,8 +3,8 @@
   "name": "SAO Template",
   "scopeName": "text.html.saola",
   "fileTypes": ["sao"],
-  "foldingStartMarker": "(@(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|env|production|verbatim|error|setup|register|script|block|comment)\\b|\\{\\s*$)",
-  "foldingStopMarker": "(@end(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|block|comment)|^\\s*\\})",
+  "foldingStartMarker": "(@(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|env|production|verbatim|error|setup|register|script|block|comment)\\b|(\\{|\\()\\s*$)",
+  "foldingStopMarker": "(@end(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|block|comment)|^\\s*(\\}|\\)))",
   "patterns": [
     {
       "comment": "Legacy PHP Syntax wrapper - Pass-through mode",
@@ -172,7 +172,7 @@
         },
         {
           "comment": "Blade directive with parenthesized arguments - highlight args as PHP",
-          "begin": "(?<![A-Za-z0-9_@])(@(?:import|if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|class|style|checked|selected|disabled|readonly|required|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await|attr|show|exec|bind))\\s*(\\()",
+          "begin": "(?<![A-Za-z0-9_@])(@(?:import|if|elseif|else\\s+if|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|class|style|checked|selected|disabled|readonly|required|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await|attr|show|exec|bind))\\s*(\\()",
           "beginCaptures": {
             "1": {
               "name": "keyword.blade"
@@ -226,7 +226,12 @@
         },
         {
           "comment": "All Blade/SAO directives without args",
-          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  if|elseif|else|endif|\n  unless|endunless|\n  switch|case|break|default|endswitch|\n  for|endfor|foreach|endforeach|forelse|empty|endforelse|\n  while|endwhile|\n  props|extends|section|endsection|yield|include|includeIf|includeWhen|includeUnless|includeFirst|component|endcomponent|slot|endslot|\n  push|endpush|pushOnce|endPushOnce|pushIf|endPushIf|\n  prepend|endprepend|prependOnce|endPrependOnce|\n  stack|once|endonce|auth|endauth|guest|endguest|can|endcan|cannot|endcannot|canany|endcanany|\n  csrf|method|error|enderror|isset|endisset|empty|endempty|\n  hasSection|sectionMissing|json|js|class|style|\n  checked|selected|disabled|readonly|required|aware|\n  use|session|lang|dump|dd|env|endenv|production|endproduction|verbatim|endverbatim|\n  comment|endcomment|\n  php|endphp|vars|let|const|state|states|useState|each|append|break|continue|default|overwrite|parent|show|stop|\n  view|wrapper|block|endblock|useBlock|mountBlock|fetch|\n  await|endawait|setup|endsetup|register|endregister|script|endscript|\n  out|import|exec|bind\n)\\b",
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  if|elseif|else\\ if|else|endif|\n  unless|endunless|\n  switch|case|break|default|endswitch|\n  for|endfor|foreach|endforeach|each|forelse|empty|endforelse|\n  while|endwhile|\n  props|extends|section|endsection|yield|include|includeIf|includeWhen|includeUnless|includeFirst|component|endcomponent|slot|endslot|\n  push|endpush|pushOnce|endPushOnce|pushIf|endPushIf|\n  prepend|endprepend|prependOnce|endPrependOnce|\n  stack|once|endonce|auth|endauth|guest|endguest|can|endcan|cannot|endcannot|canany|endcanany|\n  csrf|method|error|enderror|isset|endisset|empty|endempty|\n  hasSection|sectionMissing|json|js|class|style|\n  checked|selected|disabled|readonly|required|aware|\n  use|session|lang|dump|dd|env|endenv|production|endproduction|verbatim|endverbatim|\n  comment|endcomment|\n  php|endphp|vars|let|const|state|states|useState|each|append|break|continue|default|overwrite|parent|show|stop|\n  view|wrapper|block|endblock|useBlock|mountBlock|fetch|\n  await|endawait|setup|endsetup|register|endregister|script|endscript|\n  out|import|exec|bind\n)\\b",
+          "name": "keyword.blade"
+        },
+        {
+          "comment": "Modern Brace block closing",
+          "match": "^\\s*\\}\\s*$",
           "name": "keyword.blade"
         },
         {

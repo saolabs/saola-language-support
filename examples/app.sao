@@ -65,7 +65,13 @@
             <div class="card">
                 <button @click(setCounter(counter + 1))>{{text('web.contents.clickme', {counter: counter})}}</button>
             </div>
-
+            <div id="test">
+                <div class="demo item"><a href="#test-1">item 1</a></div>
+                <div class="demo item"><a href="#test-2">item 2</a></div>
+                <div class="demo item"><a href="#test-3">item 3</a></div>
+                <div class="demo item"><a href="#test-4">item 4</a></div>
+                <div class="demo item"><a href="#test-5">item 5</a></div>
+            </div>
         </main>
     @endblock
 </template>

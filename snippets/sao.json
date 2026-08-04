@@ -264,5 +264,25 @@
     "prefix": "e:input",
     "body": "@input(${1:handler()})",
     "description": "Input event handler"
+  },
+  "Event: click.prevent": {
+    "prefix": "e:click.prevent",
+    "body": "@click.prevent(${1:handler()})",
+    "description": "Click + preventDefault()"
+  },
+  "Event: submit.prevent": {
+    "prefix": "e:submit.prevent",
+    "body": "@submit.prevent(${1:handler()})",
+    "description": "Submit + preventDefault()"
+  },
+  "Event: click.stop": {
+    "prefix": "e:click.stop",
+    "body": "@click.stop(${1:handler()})",
+    "description": "Click + stopPropagation()"
+  },
+  "Transition": {
+    "prefix": "transition",
+    "body": "@transition('${1:fade}')",
+    "description": "Enter/leave transition — sinh class {name}-enter-from/-active/-to, {name}-leave-*"
   }
 }

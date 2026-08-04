@@ -199,7 +199,7 @@
         },
         {
           "comment": "Event directive with args - @click(), @change(), etc.",
-          "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave))\\s*(\\()",
+          "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave)(?:\\.(?:prevent|stop|self|once))*)\\s*(\\()",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.event.blade"
@@ -236,7 +236,7 @@
         },
         {
           "comment": "Event directives without args fallback",
-          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave|attr\n)(?=\\s*\\()",
+          "match": "(?x)(?<![A-Za-z0-9_@]) @(?:\n  click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave|attr|transition\n)(?:\\.(?:prevent|stop|self|once))*(?=\\s*\\()",
           "name": "keyword.control.event.blade"
         },
         {

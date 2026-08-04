@@ -330,9 +330,17 @@ const BLADE_DIRECTIVES = [
   { label: '@class', detail: 'Dynamic CSS classes', insertText: '@class([${1:\'class\': condition}])' },
   { label: '@style', detail: 'Dynamic inline styles', insertText: '@style({${1:\'property\': value}})' },
   { label: '@show', detail: 'Toggle visibility (display: none)', insertText: '@show(${1:condition})' },
+  { label: '@transition', detail: "Enter/leave transition — sinh class {name}-enter-from/-active/-to và {name}-leave-*", insertText: "@transition('${1:fade}')" },
   { label: '@hide', detail: 'Hide element (display: none)', insertText: '@hide(${1:condition})' },
 
   // --- Event Handling ---
+  // Modifier nối bằng dấu chấm, xếp chồng được: @click.stop.once(...)
+  // Tập hợp lệ phải khớp EVENT_MODIFIERS trong compiler/src/sao2js/template_ast.py.
+  { label: '@click.prevent', detail: 'Click + event.preventDefault()', insertText: '@click.prevent(${1:handler()})' },
+  { label: '@click.stop', detail: 'Click + event.stopPropagation()', insertText: '@click.stop(${1:handler()})' },
+  { label: '@click.self', detail: 'Click chỉ khi target === currentTarget', insertText: '@click.self(${1:handler()})' },
+  { label: '@click.once', detail: 'Click chỉ chạy một lần', insertText: '@click.once(${1:handler()})' },
+  { label: '@submit.prevent', detail: 'Submit + event.preventDefault()', insertText: '@submit.prevent(${1:handler()})' },
   { label: '@click', detail: 'Click events', insertText: '@click(${1:handler()})' },
   { label: '@input', detail: 'Input events', insertText: '@input(${1:handler()})' },
   { label: '@change', detail: 'Change events', insertText: '@change(${1:handler()})' },

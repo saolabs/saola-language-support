@@ -1,0 +1,36 @@
+# Chỉ đóng gói thứ extension CẦN lúc chạy:
+#   dist/extension.js (main), syntaxes/, snippets/, language-configurations/,
+#   images/icon.png, README, LICENSE.
+# Trước khi có file này, vsix nuốt cả src/ lẫn out/ (out/ là output của `tsc`,
+# không ai load — `main` trỏ dist/ do esbuild bundle).
+
+# Nguồn + output trung gian
+src/**
+out/**
+**/*.ts
+**/*.map
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# Tài liệu/ví dụ nội bộ — không cần cho người dùng cài extension
+docs/**
+examples/**
+one-icon-theme/**
+
+# Bản đóng gói cũ (vsce vốn đã bỏ qua, ghi rõ cho chắc)
+*.vsix
+update_extension.sh
+create_icon.py
+get-started.sh
+COMPLETION_REPORT.txt
+
+# Icon gốc 2048px (7.8MB) — giữ trong repo để sau này xuất lại kích thước khác,
+# nhưng KHÔNG đóng gói: marketplace chỉ cần 128–256px (images/icon.png).
+images/icon-2048-source.png
+
+# Lặt vặt
+.git/**
+.gitignore
+.vscode/**
+**/.DS_Store

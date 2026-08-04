@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
@@ -85,7 +85,9 @@
       {
         "scopeName": "text.html.saola.injection",
         "path": "./syntaxes/sao-injection.tmLanguage.json",
-        "injectTo": ["text.html.saola"],
+        "injectTo": [
+          "text.html.saola"
+        ],
         "embeddedLanguages": {
           "meta.embedded.inline.js": "javascript"
         }

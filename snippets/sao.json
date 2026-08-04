@@ -240,6 +240,11 @@
     "body": "@const(${1:NAME = value})",
     "description": "Declare immutable constant"
   },
+  "Computed": {
+    "prefix": "b:computed",
+    "body": "@computed(${1:fullName} = ${2:first + ' ' + last})",
+    "description": "Derived state with memoization — chỉ tính lại khi dependency đổi, dùng như state thường trong {{ }} / attr / @if"
+  },
   "Import": {
     "prefix": "b:import",
     "body": "@import(__template__ + '${1:path}' as ${2:Name})",

@@ -312,6 +312,7 @@ const BLADE_DIRECTIVES = [
   { label: '@vars', detail: 'Declare non-reactive variables', insertText: '@vars(${1:users, posts})' },
   { label: '@let', detail: 'Declare mutable local variable', insertText: '@let(${1:varName = value})' },
   { label: '@const', detail: 'Declare immutable constant', insertText: '@const(${1:NAME = value})' },
+  { label: '@computed', detail: 'Derived state with memoization (chỉ tính lại khi dependency đổi)', insertText: '@computed(${1:fullName} = ${2:first + \' \' + last})' },
 
   // --- Reactive State ---
   { label: '@states', detail: 'Declare reactive state (JS Object)', insertText: '@states({\n\t${1:count: 0}\n})' },
@@ -673,6 +674,9 @@ function _collectDeclaredVars(text: string): Set<string> {
     if (t.match(/^@states\((.+)/)) { _addStates(_extractDirectiveContent(lines, i), vars); continue; }
     if (t.match(/^@let\((.+)/))    { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     if (t.match(/^@const\((.+)/))  { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
+    // @computed(name = expr) khai báo `name` y như @let — thiếu dòng này thì
+    // biến computed bị báo nhầm "is not declared".
+    if (t.match(/^@computed\((.+)/)) { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     if (t.startsWith('@useState(')) {
       const content = _extractDirectiveContent(lines, i);
       _addUseStateVars(content, vars);
@@ -786,6 +790,7 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
       let declMatch: RegExpMatchArray | null;
       if ((declMatch = t.match(/^@let\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
       if ((declMatch = t.match(/^@const\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if ((declMatch = t.match(/^@computed\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
       if (t.startsWith('@useState(')) {
         _addUseStateVars(_extractDirectiveContent(lines, i), scopeStack[0]);
       }
@@ -813,7 +818,7 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
         const absOffset = lineStart + m.index;
         const diag = new vscode.Diagnostic(
           new vscode.Range(document.positionAt(absOffset), document.positionAt(absOffset + m[0].length)),
-          `'$${varName}' is not declared. Use @let, @const, @useState, @vars, or @props.`,
+          `'$${varName}' is not declared. Use @let, @const, @computed, @useState, @vars, or @props.`,
           vscode.DiagnosticSeverity.Warning
         );
         diag.source = 'SAO Template';

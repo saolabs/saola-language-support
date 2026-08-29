@@ -7,6 +7,28 @@ Các thay đổi đáng chú ý của **Saola Language Support**.
 
 ---
 
+## [1.11.0] — 2026-08-24
+
+### Thêm
+
+- **Icon riêng cho file `.sao`** — dùng brand mark SaoLabs (`icons/sao-file.svg`),
+  khai báo qua `contributes.languages[].icon` nên không cần cài thêm icon theme và
+  không ghi đè icon của các file khác.
+- **Go to Definition (Cmd/Ctrl+Click)** cho đường dẫn view: `@extends`, `@include`,
+  `@includeIf/When/Unless/First`, `@import`, `@each`, `@component` — hỗ trợ cả
+  `__layout__ + 'base'` lẫn dotted path `'web.modules.demo.card'`.
+- **Cmd/Ctrl+Click trên tag component** (`<featurecard>`, `<Header>`) nhảy tới file
+  của `@import` tương ứng, khớp cả alias `as Name`.
+- **Hover** trên directive hiện mô tả + snippet mẫu.
+
+### Ghi chú
+
+Đường dẫn view được resolve bằng cách so khớp đuôi path (nhiều segment cuối trùng
+nhất thắng) thay vì đọc config của `ViewPathResolver` bên PHP, nên hoạt động với
+mọi cách bố trí thư mục mà không cần cấu hình.
+
+---
+
 ## [1.10.0] — 2026-08-04
 
 ### Thêm

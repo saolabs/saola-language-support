@@ -374,12 +374,12 @@ Saola provides shorthand directives to bind dynamic JS variables directly to HTM
 
 #### `@class` — Dynamic CSS Classes
 ```saola
-<div @class(['container', 'active': isActive, 'text-red': hasError])>
+<div @class({'container', 'active': isActive, 'text-red': hasError})>
     Content
 </div>
 
 {{-- With img element --}}
-<img @class(['site-logo', 'has-login': userState]) />
+<img @class({'site-logo', 'has-login': userState}) />
 ```
 
 #### `@style` — Dynamic Inline Styles
@@ -687,7 +687,7 @@ Defines CSS styles for the component. The `scoped` attribute ensures styles don'
 | **Control Flow** | `@if`, `@elseif`, `@else`, `@endif`, `@switch`, `@case`, `@default`, `@break`, `@endswitch` |
 | **Loops** | `@foreach`/`@endforeach`, `@for`/`@endfor`, `@while`/`@endwhile`, `@break`, `@continue` |
 | **Visibility** | `@show(condition)`, `@hide(condition)`, `@empty`, `@isset` |
-| **Attribute Binding** | `@class([...])`, `@style({...})`, `@attr({...})` |
+| **Attribute Binding** | `@class({...})`, `@style({...})`, `@attr({...})` |
 | **Form Binding** | `@bind(var)`, `@val(var)`, `@checked(var)`, `@selected(var)` |
 | **Boolean Attrs** | `@disabled(cond)`, `@required(cond)`, `@readonly(cond)` |
 | **Event Handlers** | `@click`, `@input`, `@change`, `@submit`, `@keyup`, `@keydown`, `@keypress`, `@focus`, `@blur`, `@mouseenter`, `@mouseleave`, `@mouseover`, `@mouseout`, `@dblclick`, `@contextmenu`, `@wheel`, `@scroll`, `@resize`, `@load` |
@@ -725,9 +725,9 @@ Defines CSS styles for the component. The `scoped` attribute ensures styles don'
                     <a href="{{route('web.home')}}" title="{{siteinfo('site_name')}}">
                         <img src="{{asset('static/web/images/logo.png')}}" 
                              alt="{{siteinfo('site_name')}}" 
-                             @class(['site-logo', 'has-login': userState]) />
+                             @class({'site-logo', 'has-login': userState}) />
                     </a>
-                    <ul @class(['site-menu'])>
+                    <ul @class({'site-menu'})>
                         @foreach(posts as post)
                             <li class="menu-item">
                                 <a href="{{webPostUrl(post)}}" class="nav-link">

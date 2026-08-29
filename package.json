@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
@@ -52,6 +52,10 @@
         "extensions": [
           ".sao"
         ],
+        "icon": {
+          "light": "./icons/sao-file.svg",
+          "dark": "./icons/sao-file.svg"
+        },
         "configuration": "./language-configurations/sao.language-configuration.json"
       },
       {
@@ -63,6 +67,10 @@
         "extensions": [
           ".sao"
         ],
+        "icon": {
+          "light": "./icons/sao-file.svg",
+          "dark": "./icons/sao-file.svg"
+        },
         "configuration": "./language-configurations/sao.language-configuration.json"
       }
     ],
@@ -150,7 +158,7 @@
     "update": "npm run publish && ./update_extension.sh",
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "node ./out/test/runTest.js"
+    "test": "npm run compile && node test_viewpath.js"
   },
   "dependencies": {
     "@vscode/emmet-helper": "^2.11.0"

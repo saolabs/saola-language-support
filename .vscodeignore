@@ -22,6 +22,8 @@ one-icon-theme/**
 *.vsix
 update_extension.sh
 create_icon.py
+test_viewpath.js
+test_format.js
 get-started.sh
 COMPLETION_REPORT.txt
 

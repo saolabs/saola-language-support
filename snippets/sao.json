@@ -207,7 +207,7 @@
   },
   "Class Binding": {
     "prefix": "b:class",
-    "body": "@class([$1])",
+    "body": "@class({$1})",
     "description": "Dynamic CSS classes"
   },
   "Style Binding": {

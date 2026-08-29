@@ -36,7 +36,7 @@ Successfully updated the VS Code extension to use **official OneJS directives** 
 ✅ **Layout:** @extends, @section, @yield, @include
 ✅ **Wrapper:** @view / @wrapper
 ✅ **Async:** @fetch, @await
-✅ **Lifecycle:** @register, @script, @setup
+✅ **Lifecycle:** `<script setup>`
 
 **Total Directives:** 30+ official OneJS directives
 
@@ -166,8 +166,7 @@ Successfully updated the VS Code extension to use **official OneJS directives** 
 - `one:fetch` - @fetch data
 - `one:fetch-method` - @fetch with method
 - `one:await` - @await async
-- `one:register` - @register lifecycle
-- `one:script` - @script lifecycle
+- `one:setup` - `<script setup>` lifecycle
 - `one:component` - Complete component
 - `one:comment` - HTML comment
 

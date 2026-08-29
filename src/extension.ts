@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SaoFormatter } from './formatters/saoFormatter';
+import { SaoDefinitionProvider } from './navigation';
 import { doComplete, VSCodeEmmetConfig } from '@vscode/emmet-helper';
 import { TextDocument as LSTextDocument } from 'vscode-languageserver-textdocument';
 
@@ -327,7 +328,7 @@ const BLADE_DIRECTIVES = [
   { label: '@bind', detail: 'Two-way data binding (v-model)', insertText: '@bind(${1:variable})' },
   { label: '@val', detail: 'Bind value attribute', insertText: '@val(${1:variable})' },
   { label: '@attr', detail: 'Dynamic attributes', insertText: '@attr({${1:name: value}})' },
-  { label: '@class', detail: 'Dynamic CSS classes', insertText: '@class([${1:\'class\': condition}])' },
+  { label: '@class', detail: 'Dynamic CSS classes', insertText: '@class({${1:\'class\': condition}})' },
   { label: '@style', detail: 'Dynamic inline styles', insertText: '@style({${1:\'property\': value}})' },
   { label: '@show', detail: 'Toggle visibility (display: none)', insertText: '@show(${1:condition})' },
   { label: '@transition', detail: "Enter/leave transition — sinh class {name}-enter-from/-active/-to và {name}-leave-*", insertText: "@transition('${1:fade}')" },
@@ -372,14 +373,6 @@ const BLADE_DIRECTIVES = [
   // --- Async ---
   { label: '@fetch', detail: 'Fetch data from API', insertText: '@fetch(\'${1:/api/endpoint}\')' },
   { label: '@await', detail: 'Mark component as async', insertText: '@await' },
-
-  // --- Lifecycle & Scripts ---
-  { label: '@register', detail: 'Register component lifecycle', insertText: '@register\n\t$0\n@endregister' },
-  { label: '@endregister', detail: 'End register block' },
-  { label: '@script', detail: 'Inline component script', insertText: '@script\n\t$0\n@endscript' },
-  { label: '@endscript', detail: 'End script block' },
-  { label: '@setup', detail: 'Setup component initialization', insertText: '@setup\n\t$0\n@endsetup' },
-  { label: '@endsetup', detail: 'End setup block' },
 ];
 
 class OneDirectiveCompletionProvider implements vscode.CompletionItemProvider {
@@ -939,6 +932,34 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // ── Go to Definition (view paths + component tags) ──────────────────────
+  const definitionProvider = new SaoDefinitionProvider();
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider('sao', definitionProvider),
+    vscode.languages.registerDefinitionProvider('saola', definitionProvider)
+  );
+
+  // ── Hover documentation for directives ──────────────────────────────────
+  const hoverProvider: vscode.HoverProvider = {
+    provideHover(document, position) {
+      const range = document.getWordRangeAtPosition(position, /@\w+/);
+      if (!range) { return undefined; }
+      const word = document.getText(range).toLowerCase();
+      const directive = BLADE_DIRECTIVES.find(d => d.label.toLowerCase() === word);
+      if (!directive) { return undefined; }
+      const md = new vscode.MarkdownString(`**${directive.label}** — ${directive.detail}`);
+      const snippet = (directive as any).insertText as string | undefined;
+      if (snippet) {
+        md.appendCodeblock(snippet.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$0/g, ''), 'sao');
+      }
+      return new vscode.Hover(md, range);
+    }
+  };
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider('sao', hoverProvider),
+    vscode.languages.registerHoverProvider('saola', hoverProvider)
+  );
+
   // ── Variable Diagnostics ──────────────────────────────────────────────────
   const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
   context.subscriptions.push(varDiagnostics);
@@ -1049,7 +1070,7 @@ function _handleOnTypeFormatting(
   const prevIndentLevel = Math.floor(prevIndent / tabSize);
 
   // Blade opening directives
-  const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment|states)\b/;
+  const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|await|block|comment|states)\b/;
   // HTML opening tag (not void, not self-closing, support custom tags)
   const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
   // Opening brace/bracket
@@ -1066,7 +1087,7 @@ function _handleOnTypeFormatting(
   }
 
   // If next line is a closing tag, don't increase indent
-  const closingDirective = /^@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endblock|endcomment)\b/;
+  const closingDirective = /^@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endblock|endcomment)\b/;
 
   if (closingDirective.test(currentTrimmed) || /^<\/ /.test(currentTrimmed)) {
     // Don't change - let the language config handle it

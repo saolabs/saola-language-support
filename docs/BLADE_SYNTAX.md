@@ -714,18 +714,19 @@ Declare variables that wait for async data.
 
 ## Lifecycle & Scripts
 
-### @register / @endregister
+### `<script setup>`
 
-Register view lifecycle code (mounted, methods, computed).
+Khai báo methods, lifecycle hooks và computed cho view. Viết thẳng trong file, không cần directive bao ngoài.
 
 **Syntax:**
 ```blade
-@register
+<script setup>
+export default {
     mounted() {
         console.log('View mounted');
         this.loadData();
     },
-    
+
     methods: {
         loadData() {
             // Load data logic
@@ -734,50 +735,24 @@ Register view lifecycle code (mounted, methods, computed).
             this.data.count++;
         }
     },
-    
+
     computed: {
         fullName() {
             return this.data.firstName + ' ' + this.data.lastName;
         }
     }
-@endregister
+}
+</script>
 ```
+
+Thêm `lang="ts"` để viết TypeScript: `<script setup lang="ts">`.
 
 **Lifecycle hooks:**
 - `mounted()` - Called when view is mounted to DOM
 - `updated()` - Called when view updates
 - `unmounted()` - Called before view is removed
 
-**Snippet Trigger:** `one:register`
-
----
-
-### @script / @endscript
-
-Alias for @register (preferred).
-
-**Syntax:**
-```blade
-@script
-    mounted() {
-        console.log('View ready');
-    },
-    
-    methods: {
-        increment() {
-            this.state.count++;
-        }
-    },
-    
-    computed: {
-        total() {
-            return this.state.count * 2;
-        }
-    }
-@endscript
-```
-
-**Snippet Trigger:** `one:script`
+**Snippet Trigger:** `one:setup`
 
 ---
 
@@ -798,13 +773,15 @@ Alias for @register (preferred).
 <div @class(['active' => $isActive])>  ✅
 ```
 
-### 4. Organize Scripts in @script
+### 4. Organize Scripts in `<script setup>`
 ```blade
-@script
+<script setup>
+export default {
     mounted() { /* lifecycle */ },
     methods: { /* functions */ },
     computed: { /* derived values */ }
-@endscript
+}
+</script>
 ```
 
 ### 5. Use @json for JS Data
@@ -843,7 +820,8 @@ A proper `.one` file uses this structure:
 </blade>
 
 // 4. Lifecycle and methods
-@script
+<script setup>
+export default {
     mounted() {
         console.log('Component ready');
     },
@@ -852,7 +830,8 @@ A proper `.one` file uses this structure:
             this.state.count++;
         }
     }
-@endscript
+}
+</script>
 
 // 5. Styles
 <style>
@@ -894,15 +873,17 @@ All data from `@vars`, `@let`, `@const`, and `@useState` is **reactive**:
 ```
 
 ### Issue: Events not firing
-**Solution:** Ensure handler methods are defined in `@script`:
+**Solution:** Ensure handler methods are defined in `<script setup>`:
 ```blade
-@script
+<script setup>
+export default {
     methods: {
         handleClick() {  // ✅ Defined
             // logic
         }
     }
-@endscript
+}
+</script>
 ```
 
 ### Issue: Styles not applying

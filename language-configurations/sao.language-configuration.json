@@ -36,13 +36,13 @@
   ],
   "folding": {
     "markers": {
-      "start": "^\\s*(@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment)\\b|<!--\\s*#?region\\b)",
-      "end": "^\\s*(@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endawait|endblock|endcomment)\\b|<!--\\s*#?endregion\\b)"
+      "start": "^\\s*(@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|await|block|comment)\\b|<!--\\s*#?region\\b)",
+      "end": "^\\s*(@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endawait|endblock|endcomment)\\b|<!--\\s*#?endregion\\b)"
     }
   },
   "indentationRules": {
-    "increaseIndentPattern": "(?x)\n  (<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z][a-zA-Z0-9-]*)\\b[^/>]*>(?!.*</\\2\\s*>)\\s*$)\n  |(<(?:blade|script|style)\\b[^>]*>\\s*$)\n  |(^\\s*@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment)\\b)\n  |(\\{[^}]*$)\n  |(\\[[^\\]]*$)",
-    "decreaseIndentPattern": "(?x)\n  (^\\s*</[a-zA-Z][a-zA-Z0-9-]*\\s*>)\n  |(^\\s*/>)\n  |(^\\s*@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endawait|endblock|endcomment|else|elseif|case|default|break|empty)\\b)\n  |(^\\s*[}\\]])"
+    "increaseIndentPattern": "(?x)\n  (<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z][a-zA-Z0-9-]*)\\b[^/>]*>(?!.*</\\2\\s*>)\\s*$)\n  |(<(?:blade|script|style)\\b[^>]*>\\s*$)\n  |(^\\s*@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|await|block|comment)\\b)\n  |(\\{[^}]*$)\n  |(\\[[^\\]]*$)",
+    "decreaseIndentPattern": "(?x)\n  (^\\s*</[a-zA-Z][a-zA-Z0-9-]*\\s*>)\n  |(^\\s*/>)\n  |(^\\s*@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endawait|endblock|endcomment|else|elseif|case|default|break|empty)\\b)\n  |(^\\s*[}\\]])"
   },
   "onEnterRules": [
     {
@@ -60,7 +60,7 @@
       }
     },
     {
-      "beforeText": "^\\s*@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|setup|register|script|await|block|comment)\\b.*$",
+      "beforeText": "^\\s*@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|await|block|comment)\\b.*$",
       "action": {
         "indent": "indent"
       }
@@ -72,7 +72,7 @@
       }
     },
     {
-      "beforeText": "^\\s*@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endsetup|endregister|endscript|endawait|endblock|endcomment)\\b",
+      "beforeText": "^\\s*@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endawait|endblock|endcomment)\\b",
       "action": {
         "indent": "none"
       }

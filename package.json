@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola Language Support",
   "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.11.0",
+  "version": "1.15.0",
   "publisher": "saolabs",
   "author": {
     "name": "OneJS Framework",
@@ -78,7 +78,21 @@
       {
         "language": "saola",
         "scopeName": "text.html.saola",
-        "path": "./syntaxes/sao.tmLanguage.json"
+        "path": "./syntaxes/sao.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.inline.js": "javascript",
+          "source.css": "css",
+          "source.js": "javascript"
+        },
+        "tokenTypes": {
+          "comment": "comment",
+          "comment.block.blade": "comment",
+          "comment.block.blade.directive": "comment",
+          "punctuation.definition.comment": "comment",
+          "punctuation.definition.comment.blade": "comment",
+          "punctuation.definition.comment.begin.blade": "comment",
+          "punctuation.definition.comment.end.blade": "comment"
+        }
       },
       {
         "language": "sao",
@@ -88,6 +102,15 @@
           "meta.embedded.inline.js": "javascript",
           "source.css": "css",
           "source.js": "javascript"
+        },
+        "tokenTypes": {
+          "comment": "comment",
+          "comment.block.blade": "comment",
+          "comment.block.blade.directive": "comment",
+          "punctuation.definition.comment": "comment",
+          "punctuation.definition.comment.blade": "comment",
+          "punctuation.definition.comment.begin.blade": "comment",
+          "punctuation.definition.comment.end.blade": "comment"
         }
       },
       {
@@ -98,6 +121,15 @@
         ],
         "embeddedLanguages": {
           "meta.embedded.inline.js": "javascript"
+        },
+        "tokenTypes": {
+          "comment": "comment",
+          "comment.block.blade": "comment",
+          "comment.block.blade.directive": "comment",
+          "punctuation.definition.comment": "comment",
+          "punctuation.definition.comment.blade": "comment",
+          "punctuation.definition.comment.begin.blade": "comment",
+          "punctuation.definition.comment.end.blade": "comment"
         }
       }
     ],
@@ -158,7 +190,7 @@
     "update": "npm run publish && ./update_extension.sh",
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "npm run compile && node test_viewpath.js"
+    "test": "npm run compile && node test_viewpath.js && node test_comment_blind.js"
   },
   "dependencies": {
     "@vscode/emmet-helper": "^2.11.0"

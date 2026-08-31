@@ -210,7 +210,8 @@ const BLADE_DIRECTIVES = [
   { label: '@endfor', detail: 'End for loop' },
   { label: '@while', detail: 'While loop', insertText: '@while(${1:condition})\n\t$0\n@endwhile' },
   { label: '@endwhile', detail: 'End while loop' },
-  { label: '@each', detail: 'Render view for each item', insertText: '@each(\'${1:view}\', ${2:\$items}, \'${3:item}\')' },
+  { label: '@key', detail: 'List item key for DOM reconciliation/diffing', insertText: '@key(${1:item.id})' },
+  { label: '@each', detail: 'Render view for each item', insertText: '@each(\'${1:view}\', ${2:\\$items}, \'${3:item}\')' },
   { label: '@continue', detail: 'Continue to next iteration' },
 
   // === Laravel Blade - Auth & Permissions ===
@@ -419,6 +420,280 @@ class OneDirectiveCompletionProvider implements vscode.CompletionItemProvider {
   }
 }
 
+// =========================================================================
+// Saola Attribute, Binding, Variable & Special Tag Completion Provider
+// =========================================================================
+
+const COMMON_BINDING_ATTRS: { label: string; detail: string; insertText: string }[] = [
+  { label: ':key', detail: 'DOM diffing key for list reconciliation', insertText: ':key="${1:item.id}"' },
+  { label: ':class', detail: 'Dynamic CSS class binding (object/expression)', insertText: ':class="{ ${1:\'active\'}: ${2:condition} }"' },
+  { label: ':style', detail: 'Dynamic inline style binding (object/expression)', insertText: ':style="{ ${1:\'property\'}: ${2:value} }"' },
+  { label: ':is', detail: 'Dynamic component / tag name binding', insertText: ':is="${1:component}"' },
+  { label: ':id', detail: 'Dynamic ID binding', insertText: ':id="${1:id}"' },
+  { label: ':title', detail: 'Dynamic title binding', insertText: ':title="${1:title}"' },
+  { label: ':src', detail: 'Dynamic image/media source binding', insertText: ':src="${1:src}"' },
+  { label: ':href', detail: 'Dynamic link URL binding', insertText: ':href="${1:href}"' },
+  { label: ':value', detail: 'Dynamic value attribute binding', insertText: ':value="${1:value}"' },
+  { label: ':disabled', detail: 'Dynamic disabled boolean binding', insertText: ':disabled="${1:condition}"' },
+  { label: ':checked', detail: 'Dynamic checked boolean binding', insertText: ':checked="${1:condition}"' },
+  { label: ':selected', detail: 'Dynamic selected boolean binding', insertText: ':selected="${1:condition}"' },
+  { label: ':readonly', detail: 'Dynamic readonly boolean binding', insertText: ':readonly="${1:condition}"' },
+  { label: ':required', detail: 'Dynamic required boolean binding', insertText: ':required="${1:condition}"' },
+  { label: ':hidden', detail: 'Dynamic hidden boolean binding', insertText: ':hidden="${1:condition}"' },
+  { label: ':placeholder', detail: 'Dynamic placeholder text binding', insertText: ':placeholder="${1:placeholder}"' },
+  { label: ':name', detail: 'Dynamic name attribute binding', insertText: ':name="${1:name}"' },
+  { label: ':type', detail: 'Dynamic type attribute binding', insertText: ':type="${1:type}"' },
+  { label: ':alt', detail: 'Dynamic alt text binding', insertText: ':alt="${1:alt}"' },
+  { label: ':width', detail: 'Dynamic width binding', insertText: ':width="${1:width}"' },
+  { label: ':height', detail: 'Dynamic height binding', insertText: ':height="${1:height}"' },
+];
+
+const SPECIAL_DYNAMIC_TAGS: { label: string; detail: string; insertText: string }[] = [
+  { label: '<:template>', detail: 'Saola template root / fragment wrapper', insertText: '<:template>\n\t$0\n</:template>' },
+  { label: '<:slot>', detail: 'Saola named slot content', insertText: '<:slot name="${1:name}">\n\t$0\n</:slot>' },
+  { label: '<:component>', detail: 'Saola dynamic component renderer', insertText: '<:component is="${1:componentName}">$0</:component>' },
+  { label: '<:is>', detail: 'Saola dynamic tag alias', insertText: '<:is="${1:tag}">$0</:is>' },
+];
+
+function _collectImportedComponents(text: string): { name: string; original: string }[] {
+  const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
+  const components: { name: string; original: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const [, , path, as] = m;
+    const exported = as ?? path.split(/[./]/).pop()!;
+    components.push({ name: exported, original: path });
+  }
+  return components;
+}
+
+function _kebabCase(str: string): string {
+  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+function _getHtmlTagContext(document: vscode.TextDocument, position: vscode.Position): {
+  inTag: boolean;
+  tagName?: string;
+  inAttrValue?: boolean;
+  attrName?: string;
+  isBindingAttr?: boolean;
+  isStartingTag?: boolean;
+  tagPrefix?: string;
+} {
+  const lineText = document.lineAt(position.line).text;
+  const beforeCursor = lineText.substring(0, position.character);
+
+  // 1. Tag start check
+  const tagStartM = beforeCursor.match(/<([A-Za-z_:][\w:.-]*)$/);
+  if (tagStartM || beforeCursor.endsWith('<')) {
+    return {
+      inTag: false,
+      isStartingTag: true,
+      tagPrefix: tagStartM ? tagStartM[1] : ''
+    };
+  }
+
+  // 2. Check if inside {{ ... }} or {!! ... !!}
+  const lastDoubleBrace = beforeCursor.lastIndexOf('{{');
+  const lastUnescaped = beforeCursor.lastIndexOf('{!!');
+  const lastEcho = Math.max(lastDoubleBrace, lastUnescaped);
+  if (lastEcho >= 0) {
+    const afterEcho = beforeCursor.substring(lastEcho);
+    if (!afterEcho.includes('}}') && !afterEcho.includes('!!}')) {
+      return { inTag: false, inAttrValue: true, isBindingAttr: true };
+    }
+  }
+
+  // 3. Scan backwards up to 15 lines to find enclosing '<tag' if not closed by '>'
+  let textToCursor = '';
+  const startLine = Math.max(0, position.line - 15);
+  for (let l = startLine; l < position.line; l++) {
+    textToCursor += document.lineAt(l).text + '\n';
+  }
+  textToCursor += beforeCursor;
+
+  const lastOpen = textToCursor.lastIndexOf('<');
+  const lastClose = textToCursor.lastIndexOf('>');
+
+  if (lastOpen >= 0 && lastOpen > lastClose) {
+    const afterTag = textToCursor.substring(lastOpen);
+    const tagMatch = afterTag.match(/^<([A-Za-z_:][\w:.-]*)/);
+    if (tagMatch) {
+      const tagName = tagMatch[1];
+
+      // Check if cursor is inside attribute quotes: (:?[A-Za-z_@][\w:.-]*)\s*=\s*(["'])([^"']*)$
+      const attrMatch = afterTag.match(/(:?[A-Za-z_@][\w:.-]*)\s*=\s*(["'])([^"']*)$/);
+      if (attrMatch) {
+        const attrName = attrMatch[1];
+        const isBindingAttr = attrName.startsWith(':') || attrName.startsWith('@');
+        return { inTag: true, tagName, inAttrValue: true, attrName, isBindingAttr };
+      }
+
+      return { inTag: true, tagName, inAttrValue: false };
+    }
+  }
+
+  return { inTag: false };
+}
+
+class SaoAttributeAndTagCompletionProvider implements vscode.CompletionItemProvider {
+  provideCompletionItems(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    _token: vscode.CancellationToken,
+    _context: vscode.CompletionContext
+  ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+    const lineText = document.lineAt(position.line).text;
+    const beforeCursor = lineText.substring(0, position.character);
+    const docText = document.getText();
+
+    const ctx = _getHtmlTagContext(document, position);
+
+    // ── 1. TAG COMPLETIONS (< or <:) ──────────────────────────────────────────
+    if (ctx.isStartingTag) {
+      const prefix = ctx.tagPrefix || '';
+      const items: vscode.CompletionItem[] = [];
+
+      // Special tags (<:slot, <:template, <:component, <:is>)
+      for (const tag of SPECIAL_DYNAMIC_TAGS) {
+        const cleanTag = tag.label.replace(/[<>]/g, '');
+        if (cleanTag.toLowerCase().includes(prefix.toLowerCase()) || prefix === ':') {
+          const item = new vscode.CompletionItem(tag.label, vscode.CompletionItemKind.Class);
+          item.detail = tag.detail;
+          item.insertText = new vscode.SnippetString(
+            prefix ? tag.insertText.substring(1 + prefix.length) : tag.insertText.substring(1)
+          );
+          items.push(item);
+        }
+      }
+
+      // Imported component tags from @import
+      const importedComps = _collectImportedComponents(docText);
+      for (const comp of importedComps) {
+        const pascalName = comp.name;
+        const kebabName = _kebabCase(comp.name);
+
+        // PascalCase snippet
+        const pItem = new vscode.CompletionItem(`<${pascalName}>`, vscode.CompletionItemKind.Struct);
+        pItem.detail = `Component: ${comp.original}`;
+        pItem.insertText = new vscode.SnippetString(
+          prefix ? `${pascalName} $1/>` : `${pascalName} $1/>`
+        );
+        items.push(pItem);
+
+        // kebab-case snippet if different
+        if (kebabName !== pascalName.toLowerCase()) {
+          const kItem = new vscode.CompletionItem(`<${kebabName}>`, vscode.CompletionItemKind.Struct);
+          kItem.detail = `Component: ${comp.original} (kebab-case)`;
+          kItem.insertText = new vscode.SnippetString(
+            prefix ? `${kebabName} $1/>` : `${kebabName} $1/>`
+          );
+          items.push(kItem);
+        }
+      }
+
+      return new vscode.CompletionList(items, false);
+    }
+
+    // ── 2. VARIABLE EXPRESSION COMPLETIONS (inside :attr="..." or {{ ... }}) ──
+    if (ctx.inAttrValue && ctx.isBindingAttr) {
+      const declaredVars = _collectDeclaredVars(docText);
+      const items: vscode.CompletionItem[] = [];
+
+      for (const v of declaredVars) {
+        if (_IS_PHP_SUPERGLOBAL(v)) { continue; }
+        const isFunc = v.startsWith('set') && v.length > 3 && v[3] === v[3].toUpperCase();
+        const item = new vscode.CompletionItem(
+          v,
+          isFunc ? vscode.CompletionItemKind.Function : vscode.CompletionItemKind.Variable
+        );
+        item.detail = _IMPLICIT_VARS.has(v)
+          ? `Saola Implicit Variable: ${v}`
+          : isFunc
+            ? `State Setter: ${v}(newValue)`
+            : `Declared Variable/State: ${v}`;
+        if (isFunc) {
+          item.insertText = new vscode.SnippetString(`${v}(\${1:value})`);
+        }
+        items.push(item);
+      }
+
+      return new vscode.CompletionList(items, false);
+    }
+
+    // ── 3. ATTRIBUTE COMPLETIONS INSIDE TAG (<tag :... or <tag @...) ───────────
+    if (ctx.inTag && !ctx.inAttrValue) {
+      const items: vscode.CompletionItem[] = [];
+      const declaredVars = _collectDeclaredVars(docText);
+
+      // Check if typing after ':'
+      const lastColonIndex = beforeCursor.lastIndexOf(':');
+      const isAfterColon = lastColonIndex >= 0 && lastColonIndex >= beforeCursor.lastIndexOf(' ');
+
+      // Common binding attributes
+      for (const attr of COMMON_BINDING_ATTRS) {
+        const item = new vscode.CompletionItem(attr.label, vscode.CompletionItemKind.Property);
+        item.detail = attr.detail;
+        item.insertText = new vscode.SnippetString(
+          isAfterColon ? attr.insertText.substring(1) : attr.insertText
+        );
+        items.push(item);
+      }
+
+      // Dynamic binding attributes generated from declared variables/states
+      for (const v of declaredVars) {
+        if (_IMPLICIT_VARS.has(v) && !['user', 'users', 'items', 'item', 'errors'].includes(v)) {
+          continue;
+        }
+        if (v.startsWith('set') && v.length > 3 && v[3] === v[3].toUpperCase()) {
+          continue; // Skip setters as attribute names
+        }
+
+        const propBinding = `:${v}`;
+        const kebabBinding = `:${_kebabCase(v)}`;
+
+        // CamelCase prop binding
+        const pItem = new vscode.CompletionItem(propBinding, vscode.CompletionItemKind.Field);
+        pItem.detail = `Bind ${v} property (:${v}="${v}")`;
+        pItem.insertText = new vscode.SnippetString(
+          isAfterColon ? `${v}="\${1:${v}}"` : `:${v}="\${1:${v}}"`
+        );
+        items.push(pItem);
+
+        // kebab-case prop binding if different
+        if (kebabBinding !== propBinding) {
+          const kItem = new vscode.CompletionItem(kebabBinding, vscode.CompletionItemKind.Field);
+          kItem.detail = `Bind ${v} property (${kebabBinding}="${v}")`;
+          kItem.insertText = new vscode.SnippetString(
+            isAfterColon ? `${_kebabCase(v)}="\${1:${v}}"` : `${kebabBinding}="\${1:${v}}"`
+          );
+          items.push(kItem);
+        }
+      }
+
+      // Event directives inside tag: @click, @input, @change, @submit.prevent, @key, @class, @style, etc.
+      for (const d of BLADE_DIRECTIVES) {
+        if (d.label.startsWith('@click') || d.label.startsWith('@input') || d.label.startsWith('@change') ||
+            d.label.startsWith('@submit') || d.label.startsWith('@key') || d.label.startsWith('@class') ||
+            d.label.startsWith('@style') || d.label.startsWith('@bind') || d.label.startsWith('@val') ||
+            d.label.startsWith('@transition') || d.label.startsWith('@focus') || d.label.startsWith('@blur')) {
+          const item = new vscode.CompletionItem(d.label, vscode.CompletionItemKind.Method);
+          item.detail = d.detail;
+          if ((d as any).insertText) {
+            item.insertText = new vscode.SnippetString((d as any).insertText);
+          }
+          items.push(item);
+        }
+      }
+
+      return new vscode.CompletionList(items, false);
+    }
+
+    return undefined;
+  }
+}
+
+
 // =============================================
 // ONE Variable Diagnostic Provider
 // =============================================
@@ -443,7 +718,10 @@ function _isSaoDocument(doc: vscode.TextDocument): boolean {
 type SaoMode = 'modern' | 'legacy';
 
 function _detectSaoMode(text: string): { mode: SaoMode, firstWrapperLine: number } {
-  const lines = text.split('\n');
+  // `<template>` in ra làm ví dụ trong comment không phải thẻ bọc thật — nhận
+  // nhầm là LẬT chế độ modern/legacy của cả file, kéo theo mọi chẩn đoán sai.
+  // Làm trắng giữ số dòng nên firstWrapperLine vẫn đúng.
+  const lines = _blankBladeComments(text).split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.match(/^<(template|sao:blade)\b/i)) {
@@ -665,10 +943,33 @@ function _extractDirectiveContent(lines: string[], startIndex: number): string {
   return content;
 }
 
+/**
+ * Làm trắng vùng `{{-- --}}` và `@verbatim`, GIỮ NGUYÊN độ dài và số dòng.
+ *
+ * Các khâu quét biến ở dưới chạy THEO DÒNG và khớp `^@states(` / `^@props(`,
+ * nên ví dụ minh hoạ trong comment bị đăng ký thành biến thật — autocomplete
+ * gợi ý biến không tồn tại, và chẩn đoán "biến chưa khai báo" im lặng bỏ sót.
+ * Trang tài liệu dính nặng nhất vì nó tồn tại để in ra cú pháp Saola.
+ *
+ * Giữ số dòng là bắt buộc: `_extractDirectiveContent(lines, i)` dùng chỉ số
+ * dòng, lệch một dòng là đọc nhầm khai báo.
+ *
+ * Cùng luật với compiler — Saola\Compiler\Support\BladeComment::blank()
+ * (PHP), blankBladeComments() (compiler/src/index.js), blank_blade_comments()
+ * (compiler/src/common/utils.py).
+ */
+function _blankBladeComments(text: string): string {
+  if (!text) { return text; }
+  return text.replace(
+    /\{\{--[\s\S]*?--\}\}|@verbatim\b[\s\S]*?@endverbatim\b/gi,
+    m => m.replace(/[^\n]/g, ' ')
+  );
+}
+
 function _collectDeclaredVars(text: string): Set<string> {
   const vars = new Set<string>(_IMPLICIT_VARS);
   const { mode } = _detectSaoMode(text);
-  const lines = text.split('\n');
+  const lines = _blankBladeComments(text).split('\n');
 
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
@@ -713,7 +1014,10 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
   const { mode, firstWrapperLine } = _detectSaoMode(text);
 
   // Check for priority rule violations (multiple level-0 wrappers)
-  const lines = text.split('\n');
+  // Thẻ bọc in ra làm ví dụ trong comment không được tính là wrapper thật,
+  // nếu không sẽ báo "nhiều wrapper" oan. Làm trắng giữ số dòng nên vị trí
+  // gắn chẩn đoán vẫn đúng.
+  const lines = _blankBladeComments(text).split('\n');
   let wrapperCount = 0;
   let firstWrapperType = '';
   for (let i = 0; i < lines.length; i++) {
@@ -902,6 +1206,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Register autocomplete for directives (Blade + SAO)
+  // Register autocomplete for directives (Blade + SAO)
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
       'sao',
@@ -912,6 +1217,21 @@ export function activate(context: vscode.ExtensionContext) {
       'saola',
       new OneDirectiveCompletionProvider(),
       '@'
+    )
+  );
+
+  // ── Attribute, Binding & Tag Completion Provider ──────────────────────────
+  const attrTagProvider = new SaoAttributeAndTagCompletionProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      'sao',
+      attrTagProvider,
+      ':', '<', '@', '"', "'", '{', ' '
+    ),
+    vscode.languages.registerCompletionItemProvider(
+      'saola',
+      attrTagProvider,
+      ':', '<', '@', '"', "'", '{', ' '
     )
   );
 
@@ -923,12 +1243,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCompletionItemProvider(
       'sao',
       emmetProvider,
-      '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'
+      '>', '+', '^', '*', '#', '.', '[', '{', '!', '$'
     ),
     vscode.languages.registerCompletionItemProvider(
       'saola',
       emmetProvider,
-      '>', '+', '^', '*', '#', '.', '[', '{', '!', ':', '$'
+      '>', '+', '^', '*', '#', '.', '[', '{', '!', '$'
     )
   );
 
@@ -939,20 +1259,41 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDefinitionProvider('saola', definitionProvider)
   );
 
-  // ── Hover documentation for directives ──────────────────────────────────
+  // ── Hover documentation for directives & binding attributes ───────────────
   const hoverProvider: vscode.HoverProvider = {
     provideHover(document, position) {
-      const range = document.getWordRangeAtPosition(position, /@\w+/);
-      if (!range) { return undefined; }
-      const word = document.getText(range).toLowerCase();
-      const directive = BLADE_DIRECTIVES.find(d => d.label.toLowerCase() === word);
-      if (!directive) { return undefined; }
-      const md = new vscode.MarkdownString(`**${directive.label}** — ${directive.detail}`);
-      const snippet = (directive as any).insertText as string | undefined;
-      if (snippet) {
-        md.appendCodeblock(snippet.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$0/g, ''), 'sao');
+      // 1. Directive hover
+      const dirRange = document.getWordRangeAtPosition(position, /@[a-zA-Z0-9_.-]+/);
+      if (dirRange) {
+        const word = document.getText(dirRange).toLowerCase();
+        const directive = BLADE_DIRECTIVES.find(d => d.label.toLowerCase() === word);
+        if (directive) {
+          const md = new vscode.MarkdownString(`**${directive.label}** — ${directive.detail}`);
+          const snippet = (directive as any).insertText as string | undefined;
+          if (snippet) {
+            md.appendCodeblock(snippet.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$0/g, ''), 'sao');
+          }
+          return new vscode.Hover(md, dirRange);
+        }
       }
-      return new vscode.Hover(md, range);
+
+      // 2. Bound attribute hover (:attr)
+      const bindRange = document.getWordRangeAtPosition(position, /:[a-zA-Z0-9_:-]+/);
+      if (bindRange) {
+        const word = document.getText(bindRange);
+        const common = COMMON_BINDING_ATTRS.find(a => a.label === word);
+        const md = new vscode.MarkdownString();
+        if (common) {
+          md.appendMarkdown(`**Saola Binding Attribute \`${common.label}\`**\n\n${common.detail}`);
+          md.appendCodeblock(common.insertText.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$0/g, ''), 'sao');
+        } else {
+          const propName = word.substring(1);
+          md.appendMarkdown(`**Saola Bound Property \`${word}\`**\n\nBinds \`${propName}\` to a reactive JavaScript expression.`);
+        }
+        return new vscode.Hover(md, bindRange);
+      }
+
+      return undefined;
     }
   };
   context.subscriptions.push(

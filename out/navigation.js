@@ -81,9 +81,13 @@ async function _findView(viewPath, aliasDir) {
     const best = (0, viewPath_1.pickBestCandidate)(files.map(f => f.path), dirs, aliasDir);
     return files.find(f => f.path === best) ?? files[0];
 }
-/** Tag name under the cursor, e.g. `<post-list :x="y">` → `post-list`. */
+/** Normalizes tag/export names for case-insensitive and kebab/pascal agnostic matching */
+function _normalizeTag(name) {
+    return name.replace(/[-_:]/g, '').toLowerCase();
+}
+/** Tag name under the cursor, e.g. `<post-list :x="y">` → `post-list`, `<UserItem>` → `UserItem`. */
 function _tagAt(line, character) {
-    const re = /<\/?([A-Za-z][\w.-]*)/g;
+    const re = /<\/?([A-Za-z_:][\w:.-]*)/g;
     let m;
     while ((m = re.exec(line)) !== null) {
         const start = m.index + m[0].length - m[1].length;
@@ -95,12 +99,13 @@ function _tagAt(line, character) {
 }
 /** Resolves a component tag through the file's @import lines. */
 function _importForTag(text, tag) {
-    const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w.-]+))?\s*\)/g;
+    const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
     let m;
+    const normalizedTag = _normalizeTag(tag);
     while ((m = re.exec(text)) !== null) {
         const [, alias, path, as] = m;
         const exported = as ?? path.split(/[./]/).pop();
-        if (exported.toLowerCase() === tag.toLowerCase()) {
+        if (_normalizeTag(exported) === normalizedTag) {
             return { path, alias: viewPath_1.ALIAS_DIRS[alias ?? ''] ?? '' };
         }
     }

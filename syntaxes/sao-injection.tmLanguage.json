@@ -8,20 +8,20 @@
             "begin": "{{--",
             "beginCaptures": {
                 "0": {
-                    "name": "punctuation.definition.comment.begin.blade"
+                    "name": "comment.block.blade punctuation.definition.comment.blade"
                 }
             },
             "end": "--}}",
             "endCaptures": {
                 "0": {
-                    "name": "punctuation.definition.comment.end.blade"
+                    "name": "comment.block.blade punctuation.definition.comment.blade"
                 }
             },
             "name": "comment.block.blade"
         },
         {
             "comment": "Blade echo {{{ expr }}}",
-            "begin": "(?<!@){{{",
+            "begin": "(?<!@){{{(?!--)",
             "beginCaptures": {
                 "0": {
                     "name": "support.function.construct.begin.blade"
@@ -65,7 +65,7 @@
         },
         {
             "comment": "Blade echo {{ expr }}",
-            "begin": "(?<![@{]){{",
+            "begin": "(?<![@{]){{(?![{!-]|--)",
             "beginCaptures": {
                 "0": {
                     "name": "support.function.construct.begin.blade"
@@ -86,8 +86,35 @@
             ]
         },
         {
-            "comment": "Directive with args inside HTML tags - @class(), @style(), @attr(), etc.",
-            "begin": "(?<![A-Za-z0-9_@])(@(?:class|style|checked|selected|disabled|readonly|required|attr|show|bind|exec|import|if|elseif|unless|foreach|forelse|for|while|switch|case|isset|empty|env|error|can|cannot|canany|include|includeIf|includeWhen|includeUnless|includeFirst|component|slot|section|yield|extends|props|json|js|method|each|pushIf|push|pushOnce|prepend|prependOnce|hasSection|sectionMissing|dump|dd|use|session|lang|vars|let|const|state|states|useState|out|view|wrapper|block|useBlock|mountBlock|fetch|await))\\s*(\\()",
+            "comment": "Event directive with args inside HTML tags - @click(), @click.prevent(), @change(), etc.",
+            "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave)(?:\\.[a-zA-Z0-9_-]+)*)\\s*(\\()",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.event.blade"
+                },
+                "2": {
+                    "name": "punctuation.definition.arguments.begin.blade"
+                }
+            },
+            "end": "\\)",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.arguments.end.blade"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
+                {
+                    "include": "text.html.saola#nested-parens"
+                },
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Generic directive with args inside HTML tags - @class(), @key(), @style(), @attr(), @custom(), etc.",
+            "begin": "(?<![A-Za-z0-9_@])(@[a-zA-Z_][a-zA-Z0-9_-]*(?:\\.[a-zA-Z0-9_-]+)*)\\s*(\\()",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.blade"
@@ -113,31 +140,134 @@
             ]
         },
         {
-            "comment": "Event directive with args inside HTML tags - @click(), @change(), etc.",
-            "begin": "(?<![A-Za-z0-9_@])(@(?:click|input|change|submit|keyup|keydown|keypress|focus|blur|mouseenter|mouseleave|mouseover|mouseout|dblclick|contextmenu|wheel|scroll|resize|load|onClick|onInput|onChange|onSubmit|onKeyup|onKeydown|onFocus|onBlur|onMouseenter|onMouseleave))\\s*(\\()",
+            "comment": "Generic directive without args inside HTML tags - @disabled, @required, @checked, @custom, etc.",
+            "match": "(?<![A-Za-z0-9_@])(@[a-zA-Z_][a-zA-Z0-9_-]*(?:\\.[a-zA-Z0-9_-]+)*)\\b",
+            "name": "keyword.blade"
+        },
+        {
+            "comment": "Saola bound attribute with double quotes - :attr=\"expr\"",
+            "begin": "(?<![A-Za-z0-9_@])(:[a-zA-Z_][a-zA-Z0-9_:-]*)\\s*(=)\\s*(\")",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.event.blade"
+                    "name": "entity.other.attribute-name.saola entity.other.attribute-name.html"
                 },
                 "2": {
-                    "name": "punctuation.definition.arguments.begin.blade"
+                    "name": "punctuation.separator.key-value.html"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.html string.quoted.double.html"
                 }
             },
-            "end": "\\)",
+            "end": "\"",
             "endCaptures": {
                 "0": {
-                    "name": "punctuation.definition.arguments.end.blade"
+                    "name": "punctuation.definition.string.end.html string.quoted.double.html"
                 }
             },
             "contentName": "meta.embedded.inline.js",
             "patterns": [
                 {
-                    "include": "text.html.saola#nested-parens"
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Saola bound attribute with single quotes - :attr='expr'",
+            "begin": "(?<![A-Za-z0-9_@])(:[a-zA-Z_][a-zA-Z0-9_:-]*)\\s*(=)\\s*(')",
+            "beginCaptures": {
+                "1": {
+                    "name": "entity.other.attribute-name.saola entity.other.attribute-name.html"
                 },
+                "2": {
+                    "name": "punctuation.separator.key-value.html"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.html string.quoted.single.html"
+                }
+            },
+            "end": "'",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.html string.quoted.single.html"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
                 {
                     "include": "text.html.saola#js-expr"
                 }
             ]
+        },
+        {
+            "comment": "Saola bound attribute without quotes / boolean - :attr",
+            "match": "(?<![A-Za-z0-9_@])(:[a-zA-Z_][a-zA-Z0-9_:-]*)",
+            "name": "entity.other.attribute-name.saola entity.other.attribute-name.html"
+        },
+        {
+            "comment": "Saola event attribute with double quotes - @event=\"handler\"",
+            "begin": "(?<![A-Za-z0-9_@])(@[a-zA-Z_][a-zA-Z0-9_-]*(?:\\.[a-zA-Z0-9_-]+)*)\\s*(=)\\s*(\")",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.event.blade entity.other.attribute-name.html"
+                },
+                "2": {
+                    "name": "punctuation.separator.key-value.html"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.html string.quoted.double.html"
+                }
+            },
+            "end": "\"",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.html string.quoted.double.html"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Saola event attribute with single quotes - @event='handler'",
+            "begin": "(?<![A-Za-z0-9_@])(@[a-zA-Z_][a-zA-Z0-9_-]*(?:\\.[a-zA-Z0-9_-]+)*)\\s*(=)\\s*(')",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.event.blade entity.other.attribute-name.html"
+                },
+                "2": {
+                    "name": "punctuation.separator.key-value.html"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.html string.quoted.single.html"
+                }
+            },
+            "end": "'",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.html string.quoted.single.html"
+                }
+            },
+            "contentName": "meta.embedded.inline.js",
+            "patterns": [
+                {
+                    "include": "text.html.saola#js-expr"
+                }
+            ]
+        },
+        {
+            "comment": "Special/Dynamic tag name with colon - <:tag> or <sao:tag>",
+            "match": "(<\\/?)(:[a-zA-Z_][a-zA-Z0-9_:-]*|[a-zA-Z_][a-zA-Z0-9_:-]*:[a-zA-Z0-9_:-]*)",
+            "captures": {
+                "1": {
+                    "name": "punctuation.definition.tag.html"
+                },
+                "2": {
+                    "name": "entity.name.tag.html entity.name.tag.saola"
+                }
+            }
         }
     ]
 }

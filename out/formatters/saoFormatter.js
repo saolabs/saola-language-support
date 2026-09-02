@@ -80,10 +80,11 @@ class SaoFormatter {
         let inScriptOrStyle = false;
         let scriptStyleIndent = 0;
         let inPreBlock = false;
-        // Track multi-line paren state for @const/@let/@vars/@useState
+        // Track multi-line paren state for @const/@let/@vars/@useState/@states
         let inMultilineParen = false;
         let parenBaseIndent = 0;
         let parenDepth = 0;
+        let parenInnerIndent = 0;
         // Track multi-line Blade comments {{-- ... --}}
         let inBladeComment = false;
         let bladeCommentIndent = 0;
@@ -121,8 +122,6 @@ class SaoFormatter {
             // Check if this line starts a multi-line Blade comment
             if (trimmed.includes('{{--') && !trimmed.includes('--}}')) {
                 // Comment opened but not closed on this line
-                // Don't skip the line itself - it may contain code before the comment
-                // We'll process the line normally and enter comment mode for subsequent lines
                 bladeCommentIndent = indentLevel;
             }
             // Track <pre> blocks - don't format content inside
@@ -136,20 +135,30 @@ class SaoFormatter {
                 result.push(line);
                 continue;
             }
-            // === Handle multi-line paren continuation (@const, @let, @vars, @useState) ===
+            // === Handle multi-line paren continuation (@const, @let, @vars, @states, @props) ===
             if (inMultilineParen) {
-                // Count parens/brackets to track depth (string-aware)
+                // Count parens/brackets/braces to track depth (string-aware)
                 const parenCount = this.countParensOutsideStrings(trimmed);
-                parenDepth += parenCount;
+                const braceCount = this.countBracesOutsideStrings(trimmed);
+                // Decrease inner indent if line starts with closing brace/bracket/paren
+                if (/^[}\])]\s*,?\s*$/.test(trimmed) || /^[}\])]\s*\)/.test(trimmed)) {
+                    parenInnerIndent = Math.max(0, parenInnerIndent - 1);
+                }
+                parenDepth += parenCount + braceCount;
                 if (parenDepth <= 0) {
-                    // Closing line: ) or ]) — same indent as the @directive
+                    // Closing line: ) or }) or ]) — same indent as the @directive
                     result.push(indent.repeat(parenBaseIndent) + trimmed);
                     inMultilineParen = false;
                     parenDepth = 0;
+                    parenInnerIndent = 0;
                 }
                 else {
-                    // Content lines inside parens — one level deeper than directive
-                    result.push(indent.repeat(parenBaseIndent + 1) + trimmed);
+                    // Content lines inside parens — base + 1 + nested inner indent
+                    result.push(indent.repeat(parenBaseIndent + 1 + parenInnerIndent) + trimmed);
+                    // Increase inner indent if line ends with opening brace/bracket/paren
+                    if (/[\{\[\(]\s*$/.test(trimmed)) {
+                        parenInnerIndent++;
+                    }
                 }
                 continue;
             }
@@ -203,12 +212,18 @@ class SaoFormatter {
                 // e.g. @import([\n, @const(\n, @foreach(\n...(unclosed)\n)
                 const afterDirective = trimmed.substring(directiveMatch[0].length);
                 const parenCount = this.countParensOutsideStrings(afterDirective);
-                if (parenCount > 0) {
+                const braceCount = this.countBracesOutsideStrings(afterDirective);
+                const totalParenDepth = parenCount + braceCount;
+                if (totalParenDepth > 0) {
                     // Multi-line: parens/brackets not closed on this line
                     result.push(indent.repeat(indentLevel) + trimmed);
                     inMultilineParen = true;
                     parenBaseIndent = indentLevel;
-                    parenDepth = parenCount;
+                    parenDepth = totalParenDepth;
+                    parenInnerIndent = 0;
+                    if (/[\{\[\(]\s*$/.test(trimmed) && !trimmed.endsWith('()') && !trimmed.endsWith('{}') && !trimmed.endsWith('[]')) {
+                        // Already opened brace/bracket on directive line
+                    }
                     // Enter blade comment mode if comment opened on this line
                     if (trimmed.includes('{{--') && !trimmed.includes('--}}')) {
                         bladeCommentIndent = indentLevel;
@@ -250,12 +265,12 @@ class SaoFormatter {
                 result.push(indent.repeat(indentLevel) + trimmed);
                 continue;
             }
-            // Check closing HTML tag: </div>, </h1>, etc.
-            if (/^<\/[a-zA-Z]/.test(trimmed)) {
+            // Check closing HTML tag: </div>, </h1>, </:slot>, </sao:blade>, etc.
+            if (/^<\/[a-zA-Z_:]/.test(trimmed)) {
                 decreaseBefore = true;
             }
             // Check self-closing /> on its own line
-            if (trimmed === '/>') {
+            if (trimmed === '/>' || trimmed === '/ >') {
                 decreaseBefore = true;
             }
             // Check closing brace/bracket } ]
@@ -285,11 +300,11 @@ class SaoFormatter {
             }
             // Check opening HTML tag (not void, not self-closing, not closed on same line)
             if (!directiveMatch) {
-                const openTagMatch = trimmed.match(/^<([a-zA-Z][a-zA-Z0-9-]*)\b/);
+                const openTagMatch = trimmed.match(/^<([a-zA-Z_:][\w:.-]*)\b/);
                 if (openTagMatch) {
                     const tagName = openTagMatch[1].toLowerCase();
-                    const isSelfClosing = trimmed.endsWith('/>');
-                    const hasClosingOnSameLine = new RegExp(`</${openTagMatch[1]}\\s*>`, 'i').test(trimmed);
+                    const isSelfClosing = trimmed.endsWith('/>') || /\/\s*>$/.test(trimmed);
+                    const hasClosingOnSameLine = new RegExp(`</${openTagMatch[1].replace(/[:.-]/g, '\\$&')}\\s*>`, 'i').test(trimmed);
                     if (!VOID_ELEMENTS.has(tagName) && !isSelfClosing && !hasClosingOnSameLine && !decreaseBefore) {
                         indentLevel++;
                     }
@@ -344,6 +359,44 @@ class SaoFormatter {
             }
         }
         return false;
+    }
+    /**
+     * Count net open braces { } outside of string literals and Blade comments.
+     */
+    countBracesOutsideStrings(text) {
+        let depth = 0;
+        let inString = null;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            // Skip Blade comments {{-- ... --}}
+            if (!inString && ch === '{' && text.substring(i, i + 4) === '{{--') {
+                const endIdx = text.indexOf('--}}', i + 4);
+                if (endIdx !== -1) {
+                    i = endIdx + 3;
+                    continue;
+                }
+                return depth;
+            }
+            if ((ch === "'" || ch === '"') && (i === 0 || text[i - 1] !== '\\')) {
+                if (inString === ch) {
+                    inString = null;
+                }
+                else if (inString === null) {
+                    inString = ch;
+                }
+                continue;
+            }
+            if (inString) {
+                continue;
+            }
+            if (ch === '{') {
+                depth++;
+            }
+            else if (ch === '}') {
+                depth--;
+            }
+        }
+        return depth;
     }
     /**
      * Count net open parens/brackets outside of string literals and Blade comments.

@@ -7,7 +7,12 @@ Các thay đổi đáng chú ý của **Saola Language Support**.
 
 ---
 
-## [1.11.0] — 2026-08-24
+## [1.15.0] — 2026-08-31
+
+### Sửa
+
+- **Sửa phím tắt chú thích (Cmd + / / Ctrl + /)**: Bên ngoài `<script>`, phím tắt chú thích sẽ bọc thành comment Blade `{{-- ... --}}` thay vì chèn `//`. Trong khi đó, bên trong `<script>` vẫn dùng `//` của JavaScript như bình thường.
+
 
 ### Thêm
 

@@ -75,6 +75,11 @@
     ],
     "description": "Modern foreach loop (no \\$ prefix)"
   },
+  "Key": {
+    "prefix": "b:key",
+    "body": "@key(${1:item.id})",
+    "description": "List item key for DOM reconciliation/diffing"
+  },
   "Template Wrapper": {
     "prefix": "sao:template",
     "body": [
@@ -284,5 +289,52 @@
     "prefix": "transition",
     "body": "@transition('${1:fade}')",
     "description": "Enter/leave transition — sinh class {name}-enter-from/-active/-to, {name}-leave-*"
+  },
+  "Bound Key": {
+    "prefix": ":key",
+    "body": ":key=\"${1:item.id}\"",
+    "description": "DOM diffing key for list reconciliation"
+  },
+  "Bound Class": {
+    "prefix": ":class",
+    "body": ":class=\"{ '${1:class-name}': ${2:condition} }\"",
+    "description": "Dynamic CSS class expression"
+  },
+  "Bound Style": {
+    "prefix": ":style",
+    "body": ":style=\"{ '${1:property}': ${2:value} }\"",
+    "description": "Dynamic inline styles expression"
+  },
+  "Bound Attribute": {
+    "prefix": ":attr",
+    "body": ":${1:attribute}=\"${2:value}\"",
+    "description": "Dynamic attribute binding"
+  },
+  "Special Tag: Template": {
+    "prefix": "<:template",
+    "body": [
+      "<:template>",
+      "\t$0",
+      "</:template>"
+    ],
+    "description": "Template fragment/root wrapper"
+  },
+  "Special Tag: Slot": {
+    "prefix": "<:slot",
+    "body": [
+      "<:slot name=\"${1:name}\">",
+      "\t$0",
+      "</:slot>"
+    ],
+    "description": "Named slot placeholder"
+  },
+  "Special Tag: Component": {
+    "prefix": "<:component",
+    "body": [
+      "<:component is=\"${1:componentName}\">",
+      "\t$0",
+      "</:component>"
+    ],
+    "description": "Dynamic component container"
   }
 }

@@ -10,6 +10,10 @@ export declare class SaoFormatter implements vscode.DocumentFormattingEditProvid
      */
     private hasMultipleArgs;
     /**
+     * Count net open braces { } outside of string literals and Blade comments.
+     */
+    private countBracesOutsideStrings;
+    /**
      * Count net open parens/brackets outside of string literals and Blade comments.
      * Returns positive number if more opens than closes, negative if more closes.
      */

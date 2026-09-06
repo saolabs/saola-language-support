@@ -43,7 +43,7 @@ const viewPath_1 = require("./viewPath");
 // matching .sao file. The real path mapping lives in the PHP ViewPathResolver
 // (config-driven), so we match by trailing path segments instead of trying to
 // mirror that config here.
-const VIEW_DIRECTIVE = /@(extends|include|includeIf|includeWhen|includeUnless|includeFirst|import|each|component)\b/;
+const VIEW_DIRECTIVE = /@(extends|include|includeIf|includeWhen|includeUnless|includeFirst|importView|import|each|component)\b/;
 /** The quoted string literal containing `character`, if any. */
 function _stringAt(line, character) {
     const re = /'([^']*)'|"([^"]*)"/g;
@@ -99,7 +99,7 @@ function _tagAt(line, character) {
 }
 /** Resolves a component tag through the file's @import lines. */
 function _importForTag(text, tag) {
-    const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
+    const re = /@import(?:View)?\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
     let m;
     const normalizedTag = _normalizeTag(tag);
     while ((m = re.exec(text)) !== null) {

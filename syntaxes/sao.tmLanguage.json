@@ -6,6 +6,7 @@
   "foldingStartMarker": "(@(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|env|production|verbatim|error|block|comment)\\b|(\\{|\\()\\s*$)",
   "foldingStopMarker": "(@end(if|foreach|forelse|for|while|unless|switch|can|cannot|canany|auth|guest|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|block|comment)|^\\s*(\\}|\\)))",
   "patterns": [
+    { "include": "#setup-script" },
     {
       "comment": "Legacy PHP Syntax wrapper - Pass-through mode",
       "begin": "(<)(blade)(>)",
@@ -52,6 +53,69 @@
     }
   ],
   "repository": {
+    "setup-script": {
+      "name": "meta.embedded.block.saola.setup",
+      "begin": "(<)(script)(?=\\s[^>]*\\bsetup(?:\\s|=|>))([^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.html"
+        },
+        "2": {
+          "name": "entity.name.tag.html"
+        },
+        "3": {
+          "name": "entity.other.attribute-name.html"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.html"
+        }
+      },
+      "end": "(</)(script)(\\s*>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.html"
+        },
+        "2": {
+          "name": "entity.name.tag.html"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.html"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#setup-declaration"
+        },
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    "setup-declaration": {
+      "begin": "(?<![A-Za-z0-9_@])(@(?:vars|props|state|states|let|const|computed|asset|assets|useState|importView))\\s*(\\()",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.blade"
+        },
+        "2": {
+          "name": "punctuation.definition.arguments.begin.blade"
+        }
+      },
+      "end": "\\)",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.arguments.end.blade"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#nested-parens"
+        },
+        {
+          "include": "#js-expr"
+        }
+      ]
+    },
     "blade": {
       "patterns": [
         {

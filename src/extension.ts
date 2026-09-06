@@ -310,11 +310,12 @@ const BLADE_DIRECTIVES = [
 
   // --- Data & Variables ---
   { label: '@import', detail: 'Import template/component', insertText: '@import(${1:__template__ + \'path\'} as ${2:Name})' },
+  { label: '@importView', detail: 'Import a view inside <script setup>', insertText: '@importView(${1:__component__ + \'path\'} as ${2:Name})' },
   { label: '@props', detail: 'Declare component properties', insertText: '@props(${1:title, theme=\'dark\'})' },
   { label: '@vars', detail: 'Declare non-reactive variables', insertText: '@vars(${1:users, posts})' },
-  { label: '@let', detail: 'Declare mutable local variable', insertText: '@let(${1:varName = value})' },
-  { label: '@const', detail: 'Declare immutable constant', insertText: '@const(${1:NAME = value})' },
-  { label: '@computed', detail: 'Derived state with memoization (chỉ tính lại khi dependency đổi)', insertText: '@computed(${1:fullName} = ${2:first + \' \' + last})' },
+  { label: '@let', detail: 'Mutable local; optional name: Type = value', insertText: '@let(${1:varName = value})' },
+  { label: '@const', detail: 'Constant; optional name: Type = value', insertText: '@const(${1:NAME = value})' },
+  { label: '@computed', detail: 'Lazy computed; optional type; script reads get$name()', insertText: '@computed(${1:fullName} = ${2:first + \' \' + last})' },
 
   // --- Reactive State ---
   { label: '@states', detail: 'Declare reactive state (JS Object)', insertText: '@states({\n\t${1:count: 0}\n})' },
@@ -456,7 +457,7 @@ const SPECIAL_DYNAMIC_TAGS: { label: string; detail: string; insertText: string 
 ];
 
 function _collectImportedComponents(text: string): { name: string; original: string }[] {
-  const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
+  const re = /@import(?:View)?\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
   const components: { name: string; original: string }[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
@@ -735,6 +736,41 @@ function _detectSaoMode(text: string): { mode: SaoMode, firstWrapperLine: number
   return { mode: 'modern', firstWrapperLine: -1 };
 }
 
+/** Top-level declaration names; types/default expressions never declare variables. */
+function _declarationNames(content: string): string[] {
+  const text = content.trim();
+  const names: string[] = [];
+  const object = text.startsWith('{');
+  let start = object ? 1 : 0;
+  let depth = 0, angles = 0;
+  let quote = '', inType = false, inValue = false;
+  const add = (end: number) => {
+    const match = text.slice(start, end).trim().match(/^\$?([A-Za-z_]\w*)\s*(?=[:=,;]|$)/);
+    if (match) { names.push(match[1]); }
+  };
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === '\\') { i++; }
+      else if (c === quote) { quote = ''; }
+      continue;
+    }
+    if ('"\'`'.includes(c)) { quote = c; continue; }
+    if (object && c === '}' && depth === 0) { add(i); return names; }
+    if ('([{'.includes(c)) { depth++; continue; }
+    if (')]}'.includes(c)) { depth--; continue; }
+    if (depth !== 0) { continue; }
+    if (c === ':' && !object && !inValue) { inType = true; }
+    if (inType && c === '<') { angles++; continue; }
+    if (inType && c === '>' && angles > 0 && text[i - 1] !== '=') { angles--; continue; }
+    if (angles !== 0) { continue; }
+    if (c === '=' && text[i + 1] !== '>') { inType = false; inValue = true; }
+    if (c === ',') { add(i); start = i + 1; inType = false; inValue = false; }
+  }
+  add(text.length);
+  return names;
+}
+
 function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void {
   // Match both $var = and var = to support mixed modes
   const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
@@ -744,9 +780,7 @@ function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void 
     }
     return;
   }
-  for (const m of expr.matchAll(/\$?(\w+)\s*=[^=]/g)) {
-    vars.add(m[1]);
-  }
+  for (const name of _declarationNames(expr)) { vars.add(name); }
 }
 
 function _addDeclarationVars(content: string, vars: Set<string>, mode: SaoMode): void {
@@ -763,19 +797,12 @@ function _addDeclarationVars(content: string, vars: Set<string>, mode: SaoMode):
     return;
   }
 
-  // Fallback: match all variable-like identifiers
-  // We match both $var and var to be safe across modes
-  for (const m of content.matchAll(/\$?(\w+)/g)) {
-    vars.add(m[1]);
-  }
+  for (const name of _declarationNames(content)) { vars.add(name); }
 }
 
 function _addStates(content: string, vars: Set<string>): void {
-  // Parse simple JS object literal keys: { count: 0, user: {} }
-  for (const m of content.matchAll(/(\w+)\s*:/g)) {
-    const key = m[1];
+  for (const key of _declarationNames(content)) {
     vars.add(key);
-    // Add setter: setKey
     vars.add('set' + key.charAt(0).toUpperCase() + key.slice(1));
   }
 }
@@ -973,7 +1000,7 @@ function _collectDeclaredVars(text: string): Set<string> {
 
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
-    if (t.match(/^@states\((.+)/)) { _addStates(_extractDirectiveContent(lines, i), vars); continue; }
+    if (t.match(/^@states?\((.+)/)) { _addStates(_extractDirectiveContent(lines, i), vars); continue; }
     if (t.match(/^@let\((.+)/))    { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     if (t.match(/^@const\((.+)/))  { _addAssignedVars(_extractDirectiveContent(lines, i), vars, mode); continue; }
     // @computed(name = expr) khai báo `name` y như @let — thiếu dòng này thì

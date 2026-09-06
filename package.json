@@ -82,7 +82,8 @@
         "embeddedLanguages": {
           "meta.embedded.inline.js": "javascript",
           "source.css": "css",
-          "source.js": "javascript"
+          "source.js": "javascript",
+          "source.ts": "typescript"
         },
         "tokenTypes": {
           "comment": "comment",
@@ -101,7 +102,8 @@
         "embeddedLanguages": {
           "meta.embedded.inline.js": "javascript",
           "source.css": "css",
-          "source.js": "javascript"
+          "source.js": "javascript",
+          "source.ts": "typescript"
         },
         "tokenTypes": {
           "comment": "comment",
@@ -190,7 +192,7 @@
     "update": "npm run publish && ./update_extension.sh",
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "npm run compile && node test_viewpath.js && node test_comment_blind.js"
+    "test": "npm run compile && node test_viewpath.js && node test_comment_blind.js && node test_typed_declarations.js && node test_setup_declarations.js"
   },
   "dependencies": {
     "@vscode/emmet-helper": "^2.11.0"

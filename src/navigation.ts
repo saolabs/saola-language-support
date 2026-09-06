@@ -9,7 +9,7 @@ import { ALIAS_DIRS, splitViewPath, pickBestCandidate } from './viewPath';
 // (config-driven), so we match by trailing path segments instead of trying to
 // mirror that config here.
 
-const VIEW_DIRECTIVE = /@(extends|include|includeIf|includeWhen|includeUnless|includeFirst|import|each|component)\b/;
+const VIEW_DIRECTIVE = /@(extends|include|includeIf|includeWhen|includeUnless|includeFirst|importView|import|each|component)\b/;
 
 /** The quoted string literal containing `character`, if any. */
 function _stringAt(line: string, character: number): { value: string; start: number; end: number } | undefined {
@@ -65,7 +65,7 @@ function _tagAt(line: string, character: number): string | undefined {
 
 /** Resolves a component tag through the file's @import lines. */
 function _importForTag(text: string, tag: string): { path: string; alias: string } | undefined {
-  const re = /@import\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
+  const re = /@import(?:View)?\s*\(\s*(?:(__\w+__)\s*\+\s*)?['"]([^'"]+)['"]\s*(?:as\s+([\w:.-]+))?\s*\)/g;
   let m: RegExpExecArray | null;
   const normalizedTag = _normalizeTag(tag);
   while ((m = re.exec(text)) !== null) {

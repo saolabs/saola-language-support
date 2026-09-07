@@ -381,8 +381,8 @@ class OneDirectiveCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
-    context: vscode.CompletionContext
+    _token: vscode.CancellationToken,
+    _context: vscode.CompletionContext
   ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
     const line = document.lineAt(position).text;
     const beforeCursor = line.substring(0, position.character);
@@ -466,6 +466,31 @@ function _collectImportedComponents(text: string): { name: string; original: str
     components.push({ name: exported, original: path });
   }
   return components;
+}
+
+/** Collect user functions declared directly in <script setup>.
+ *  This is intentionally syntax-only: TypeScript remains the source of truth
+ *  for semantic checking, while the extension can still offer template
+ *  completion for handlers and expressions.
+ */
+function _collectSetupFunctions(text: string): { name: string; params: string }[] {
+  const functions: { name: string; params: string }[] = [];
+  const scriptRe = /<script\b(?=[^>]*\bsetup(?:\s|=|>))[^>]*>([\s\S]*?)<\/script\s*>/gi;
+  let script: RegExpExecArray | null;
+  while ((script = scriptRe.exec(text)) !== null) {
+    const body = script[1];
+    const declarationRe = /(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g;
+    let match: RegExpExecArray | null;
+    while ((match = declarationRe.exec(body)) !== null) {
+      functions.push({ name: match[1], params: match[2].trim() });
+    }
+    // Also support the standard TS/JS const arrow-function form.
+    const arrowRe = /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/g;
+    while ((match = arrowRe.exec(body)) !== null) {
+      functions.push({ name: match[1], params: match[2].trim() });
+    }
+  }
+  return functions;
 }
 
 function _kebabCase(str: string): string {
@@ -599,6 +624,7 @@ class SaoAttributeAndTagCompletionProvider implements vscode.CompletionItemProvi
     // ── 2. VARIABLE EXPRESSION COMPLETIONS (inside :attr="..." or {{ ... }}) ──
     if (ctx.inAttrValue && ctx.isBindingAttr) {
       const declaredVars = _collectDeclaredVars(docText);
+      const setupFunctions = _collectSetupFunctions(docText);
       const items: vscode.CompletionItem[] = [];
 
       for (const v of declaredVars) {
@@ -616,6 +642,13 @@ class SaoAttributeAndTagCompletionProvider implements vscode.CompletionItemProvi
         if (isFunc) {
           item.insertText = new vscode.SnippetString(`${v}(\${1:value})`);
         }
+        items.push(item);
+      }
+
+      for (const fn of setupFunctions) {
+        const item = new vscode.CompletionItem(fn.name, vscode.CompletionItemKind.Function);
+        item.detail = fn.params ? `Setup function: ${fn.name}(${fn.params})` : `Setup function: ${fn.name}()`;
+        item.insertText = new vscode.SnippetString(`${fn.name}(${fn.params ? '${1}' : ''})`);
         items.push(item);
       }
 
@@ -771,7 +804,7 @@ function _declarationNames(content: string): string[] {
   return names;
 }
 
-function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void {
+function _addAssignedVars(expr: string, vars: Set<string>, _mode: SaoMode): void {
   // Match both $var = and var = to support mixed modes
   const destructM = expr.match(/^\s*\[([^\]]+)\]\s*=/);
   if (destructM) {
@@ -783,7 +816,7 @@ function _addAssignedVars(expr: string, vars: Set<string>, mode: SaoMode): void 
   for (const name of _declarationNames(expr)) { vars.add(name); }
 }
 
-function _addDeclarationVars(content: string, vars: Set<string>, mode: SaoMode): void {
+function _addDeclarationVars(content: string, vars: Set<string>, _mode: SaoMode): void {
   // Always check for object literal style first (e.g., @props({ key: val }))
   if (content.trim().startsWith('{')) {
     _addStates(content, vars);
@@ -1038,7 +1071,7 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
   const text = document.getText();
   const diagnostics: vscode.Diagnostic[] = [];
   
-  const { mode, firstWrapperLine } = _detectSaoMode(text);
+  const { mode } = _detectSaoMode(text);
 
   // Check for priority rule violations (multiple level-0 wrappers)
   // Thẻ bọc in ra làm ví dụ trong comment không được tính là wrapper thật,
@@ -1119,15 +1152,14 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
       }
 
       // Global declarations in directives
-      let declMatch: RegExpMatchArray | null;
-      if ((declMatch = t.match(/^@let\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
-      if ((declMatch = t.match(/^@const\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
-      if ((declMatch = t.match(/^@computed\((.+)/))) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (/^@let\((.+)/.test(t)) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (/^@const\((.+)/.test(t)) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (/^@computed\((.+)/.test(t)) { _addAssignedVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
       if (t.startsWith('@useState(')) {
         _addUseStateVars(_extractDirectiveContent(lines, i), scopeStack[0]);
       }
-      if ((declMatch = t.match(/^@vars\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
-      if ((declMatch = t.match(/^@props\((.+)/))) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (/^@vars\((.+)/.test(t)) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
+      if (/^@props\((.+)/.test(t)) { _addDeclarationVars(_extractDirectiveContent(lines, i), scopeStack[0], mode); }
 
       // @exec assignments
       if (/^@exec\(/i.test(t)) {
@@ -1184,9 +1216,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerDocumentRangeFormattingEditProvider('sao', {
       provideDocumentRangeFormattingEdits(
-        document: vscode.TextDocument,
-        range: vscode.Range,
-        options: vscode.FormattingOptions,
+        _document: vscode.TextDocument,
+        _range: vscode.Range,
+        _options: vscode.FormattingOptions,
         _token: vscode.CancellationToken
       ): vscode.TextEdit[] {
         // For range formatting, delegate to full document formatter
@@ -1196,9 +1228,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.languages.registerDocumentRangeFormattingEditProvider('saola', {
       provideDocumentRangeFormattingEdits(
-        document: vscode.TextDocument,
-        range: vscode.Range,
-        options: vscode.FormattingOptions,
+        _document: vscode.TextDocument,
+        _range: vscode.Range,
+        _options: vscode.FormattingOptions,
         _token: vscode.CancellationToken
       ): vscode.TextEdit[] {
         return [];

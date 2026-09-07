@@ -7,6 +7,35 @@ Các thay đổi đáng chú ý của **Saola Language Support**.
 
 ---
 
+## [1.15.4] — 2026-09-07
+
+### Sửa
+
+- Phím tắt comment (`Cmd+/`) trong `<script setup>` nay sinh `//` thay vì
+  `{{-- --}}`. Vùng thân `<script setup>` giờ khai `contentName: source.ts`,
+  nên VS Code nhận ra đó là TypeScript và dùng cú pháp comment của TypeScript;
+  trước đây cả file bị coi là `saola` nên chỉ có comment Blade.
+
+---
+
+## [1.15.2] — 2026-09-07
+
+### Sửa
+
+- Tách đúng scope TextMate cho tên biến, kiểu nguyên thủy và kiểu TypeScript
+  trong các declaration như `@vars`, `@props`, `@state`, `@states` và
+  `@computed`.
+- Tô riêng tên thuộc tính và giá trị chuỗi trong thẻ `<script setup lang="ts">`.
+
+### Thêm
+
+- Completion cho function và arrow function khai báo trực tiếp trong
+  `<script setup>`.
+- Kiểm thử tokenization bằng TextMate/Oniguruma, cùng engine grammar mà VS Code
+  sử dụng.
+
+---
+
 ## [1.15.0] — 2026-08-31
 
 ### Sửa

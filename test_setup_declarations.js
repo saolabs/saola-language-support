@@ -13,9 +13,14 @@ function functions(file, names, scope = {}) {
     return new Function(...Object.keys(scope), `${body}; return {${names.join(',')}};`)(...Object.values(scope));
 }
 
-const { _collectImportedComponents } = functions('./out/extension.js', ['_collectImportedComponents']);
+const { _collectImportedComponents, _collectSetupFunctions } = functions('./out/extension.js', ['_collectImportedComponents', '_collectSetupFunctions']);
 assert.deepEqual(_collectImportedComponents("<script setup>\n@importView(__component__ + 'statcard' as Card)\n</script>"), [{ name: 'Card', original: 'statcard' }]);
 assert.deepEqual(_collectImportedComponents("@import('web.card' as Card)"), [{ name: 'Card', original: 'web.card' }]);
+assert.deepEqual(_collectSetupFunctions('<script setup lang="ts">\nfunction increment(step: number): number { return step + 1 }\nconst reset = () => 0\n</script>'), [
+    { name: 'increment', params: 'step: number' },
+    { name: 'reset', params: '' },
+]);
+assert.deepEqual(_collectSetupFunctions('<script lang="ts">\nfunction ignored() {}\n</script>'), []);
 
 const { _importForTag } = functions('./out/navigation.js', ['_normalizeTag', '_importForTag'], { viewPath_1: require('./out/viewPath.js') });
 assert.equal(_importForTag("@importView('web.card' as Card)", 'Card').path, 'web.card');

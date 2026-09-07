@@ -55,8 +55,12 @@
   "repository": {
     "setup-script": {
       "name": "meta.embedded.block.saola.setup",
+      "contentName": "source.ts",
       "begin": "(<)(script)(?=\\s[^>]*\\bsetup(?:\\s|=|>))([^>]*)(>)",
       "beginCaptures": {
+        "0": {
+          "name": "meta.tag.metadata.script.start.html"
+        },
         "1": {
           "name": "punctuation.definition.tag.begin.html"
         },
@@ -64,7 +68,47 @@
           "name": "entity.name.tag.html"
         },
         "3": {
-          "name": "entity.other.attribute-name.html"
+          "name": "meta.tag.attributes.script.html",
+          "patterns": [
+            {
+              "begin": "\"",
+              "beginCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.begin.html"
+                }
+              },
+              "end": "\"",
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.end.html"
+                }
+              },
+              "name": "string.quoted.double.html"
+            },
+            {
+              "begin": "'",
+              "beginCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.begin.html"
+                }
+              },
+              "end": "'",
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.end.html"
+                }
+              },
+              "name": "string.quoted.single.html"
+            },
+            {
+              "match": "=",
+              "name": "punctuation.separator.key-value.html"
+            },
+            {
+              "match": "[a-zA-Z_:][-a-zA-Z0-9_:.]*",
+              "name": "entity.other.attribute-name.html"
+            }
+          ]
         },
         "4": {
           "name": "punctuation.definition.tag.end.html"
@@ -72,6 +116,9 @@
       },
       "end": "(</)(script)(\\s*>)",
       "endCaptures": {
+        "0": {
+          "name": "meta.tag.metadata.script.end.html"
+        },
         "1": {
           "name": "punctuation.definition.tag.begin.html"
         },
@@ -304,8 +351,20 @@
     "js-expr": {
       "patterns": [
         {
+          "match": "\\b(?:string|number|boolean|bigint|symbol|object|unknown|any|never|void|undefined|null)\\b",
+          "name": "support.type.primitive.ts"
+        },
+        {
+          "match": "\\b(?:Array|ReadonlyArray|Record|Partial|Required|Readonly|Pick|Omit|Exclude|Extract|NonNullable|ReturnType|Parameters|Promise|Map|Set|Date)\\b",
+          "name": "support.type.builtin.ts"
+        },
+        {
+          "match": "\\b[A-Z][A-Za-z0-9_$]*\\b(?=\\s*(?:$|\\[|<|>|\\||&|,|;|[}=)]))",
+          "name": "entity.name.type.ts"
+        },
+        {
           "match": "\\b(as)\\b",
-          "name": "keyword.control.as.js"
+          "name": "keyword.control.as.ts"
         },
         {
           "match": "\\b(true|false|null|undefined)\\b",
@@ -317,23 +376,23 @@
         },
         {
           "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b(?=\\s*\\()",
-          "name": "support.function.js"
+          "name": "entity.name.function.ts"
         },
         {
-          "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b(?=\\s*:)",
-          "name": "variable.other.readwrite.js"
+          "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b(?=\\s*\\??\\s*:)",
+          "name": "variable.other.readwrite.ts"
         },
         {
           "match": "\\.\\s*([a-zA-Z_$][a-zA-Z0-9_$]*)",
           "captures": {
             "1": {
-              "name": "variable.other.property.js"
+              "name": "variable.other.property.ts"
             }
           }
         },
         {
           "match": "(?x)\\b(?!(?:true|false|null|undefined|if|else|foreach|forelse|for|while|do|switch|case|break|continue|return|function|class|const|let|var|await|async|import|export|default|new|this|typeof|instanceof|void|delete|in|of|yield|as)\\b)[a-zA-Z_$][a-zA-Z0-9_$]*\\b",
-          "name": "variable.other.readwrite.js"
+          "name": "variable.other.readwrite.ts"
         },
         {
           "match": "[\\[\\]]",

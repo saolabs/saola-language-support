@@ -738,6 +738,10 @@ const _IMPLICIT_VARS = new Set([
   '__base__', '__layout__', '__page__', '__component__',
   '__template__', '__context__', '__partial__', '__system__',
   '__env', '__helper',
+  // `$view` — biến hệ thống trỏ tới chính view đang chạy. CHỈ có ở client
+  // (handler sự kiện, <script setup>); dùng trong biểu thức được SSR render
+  // thì compiler báo lỗi.
+  'view',
   // Common Blade/Laravel implicit variables
   'loop', 'this', 'errors', 'message', 'slot',
   'app', 'request', 'auth', 'session', 'user',
@@ -1292,6 +1296,37 @@ export function activate(context: vscode.ExtensionContext) {
       attrTagProvider,
       ':', '<', '@', '"', "'", '{', ' '
     )
+  );
+
+  // ── `$view` member completion ───────────────────────────────────────────
+  // `$view` là biến hệ thống, không khai báo ở đâu trong file nên không có
+  // nguồn nào khác để suy ra thành viên của nó.
+  const viewMemberProvider: vscode.CompletionItemProvider = {
+    provideCompletionItems(doc, position) {
+      const upTo = doc.lineAt(position).text.slice(0, position.character);
+      if (!/\$view\.$/.test(upTo)) return undefined;
+
+      const emit = new vscode.CompletionItem('emit', vscode.CompletionItemKind.Method);
+      emit.insertText = new vscode.SnippetString("emit('${1:tên}'${2:, payload})");
+      emit.detail = 'emit(event, ...args): any';
+      emit.documentation = new vscode.MarkdownString(
+        'Phát sự kiện lên **cha đã `@include` view này**, không qua event bus.\n\n' +
+        'Cha lắng nghe ngay tại thẻ: `<Card @edit(openEditor) />`, hoặc bằng khoá ' +
+        '`on$edit` trong data của `@include`.\n\n' +
+        'Trả về giá trị listener trả về, nên con hỏi được cha:\n' +
+        '```sao\nif ($view.emit(\'confirm\', id) === false) return;\n```\n' +
+        'Không ai nghe thì trả `undefined`.',
+      );
+
+      const path = new vscode.CompletionItem('path', vscode.CompletionItemKind.Property);
+      path.detail = 'path: string — đường dẫn view';
+
+      return [emit, path];
+    },
+  };
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider('sao', viewMemberProvider, '.'),
+    vscode.languages.registerCompletionItemProvider('saola', viewMemberProvider, '.'),
   );
 
   // ── Emmet HTML Completion Provider ──────────────────────────────────────

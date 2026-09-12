@@ -18,6 +18,7 @@ Typing `@` gives you instant access to **100+ Saola & Blade directives**:
 - **Core Directives**: `@state`, `@states`, `@props`, `@import`, `@await`, etc.
 - **Full Event Handler Suite**: All standard HTML events (`@click`, `@keyup`, `@mouseenter`, etc.) with modern snippet support.
 - **Logic & Control Flow**: `@if`, `@foreach`, `@forelse`, `@switch`, and many more.
+- **Tag directives**: `#if`, `#elseif`, `#else`, `#switch`, `#case`, `#default`, `#foreach`, `#for`, `#while`, `#key` — the shorthand for wrapping a single tag, highlighted with their expressions as JS. A closed name set, so `#fff` in `style="color: #fff"` is left alone.
 
 ### ⚡ Professional Snippets
 Comprehensive snippets for all Saola constructs. Type `b:` to see them:

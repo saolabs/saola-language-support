@@ -7,6 +7,69 @@ Các thay đổi đáng chú ý của **Saola Language Support**.
 
 ---
 
+## [1.17.0] — 2026-09-11
+
+### Thêm
+
+- **Kiểm tra kiểu thật cho `<script setup>`** (`src/setupCheck.ts`): thân
+  script được dựng lại thành một module TypeScript ảo — khai báo `@props`/
+  `@state`/`@let`/`@const`/`@computed` thành `let`/`const` chép nguyên văn,
+  các biến closure của view (`__data__`, `$view`, `__layout__`, `useState`…)
+  khai sẵn — rồi tsserver báo lỗi ngay trong editor: sai kiểu default, gọi
+  setter sai kiểu, dùng biến chưa khai báo. Lỗi chỉ hiện trên chữ người dùng
+  gõ; phần sinh thêm không bao giờ tạo squiggle.
+- Cú pháp `@props({a = 1, b = 'x'}: {a: number; b: string})` — mặc định
+  bằng `=` như tham số hàm TS. Chỉ dạng này được kiểm kiểu; `{a: 1}` cũ vẫn
+  chạy nhưng chỉ khai tên (`any`). Khai báo ngoài script vẫn dùng chung phạm
+  vi và được thu vào module ảo.
+- `_IMPLICIT_VARS` lấy từ `CLOSURE_NAMES` — một danh sách cho cả hai chỗ;
+  bổ sung `__module__`, `__VIEW_ID__`, `__VIEW_PATH__`, `$controller`,
+  `__view_fallback_from__/to__`, `attributes`, `module_slug`, `context`.
+- `typescript` thành dependency thật (không bundle) để có `lib.*.d.ts` lúc
+  chạy; `.vscodeignore` giữ lại `node_modules/typescript/lib/**`.
+- `test_setup_check.js`: sạch / sai kiểu default / biến chưa khai / setter
+  sai kiểu / dạng cũ không báo bừa / import không resolve không phải lỗi.
+- **Biến chưa khai báo trong template ở modern mode** (`checkTemplate`):
+  trước đây chỉ legacy `<blade>` có kiểm tra vì cần `$`. Giờ phạm vi view lấy
+  từ chính module ảo (closure + khai báo trong/ngoài script + hàm setup +
+  method `export default`), cộng khai báo cục bộ template, biến vòng lặp
+  `as row`/`as k => v`, tham số arrow `(id, {tag}) => …`, và global
+  (`event`, `emit`, `loop`, `Math`…). Quét `{{ }}`, `{!! !!}`,
+  `@directive(...)`, `#directive(...)`, `:attr="..."`. Không báo tên hàm được
+  gọi (helper), khoá object, thuộc tính sau `.`. Cảnh báo (Warning), nguồn
+  `SAO Template`. `test_template_check.js`; quét 75 file thật: 0 báo sai.
+
+### Sửa
+
+- `<script setup>` in trong `{{-- --}}` hay `@verbatim` không còn bị nhận
+  nhầm là khối script thật.
+- Chẩn đoán chạy sau 300ms gõ xong thay vì mỗi phím.
+
+---
+
+## [1.16.0] — 2026-09-10
+
+### Thêm
+
+- Tô màu directive viết trên thẻ: `#if` `#elseif` `#else` `#switch` `#case`
+  `#default` `#foreach` `#for` `#while` `#key`. Giá trị được tô như biểu thức
+  JS, giống `:attr="..."`.
+- Tên directive là **tập đóng**, khớp với compiler. Nhờ vậy `#fff` trong
+  `style="color: #fff"`, `#section` trong `href="#section"` và `#quan-trọng`
+  trong văn bản không bị tô nhầm thành directive.
+- 12 snippet cho directive trên thẻ: gõ `#if`, `#foreach`… ngay trong thẻ, cộng
+  hai khung `b:tag-if` (chuỗi ba nhánh) và `b:tag-switch` (thẻ cha + các case).
+- `test_tag_directive_sets.js` chốt ba nguồn khai tên directive — compiler,
+  grammar, snippets — phải khớp nhau tuyệt đối.
+
+### Sửa
+
+- Snippets trước đây chỉ đăng ký cho language id `sao`, trong khi extension khai
+  **hai** id cùng nhận `.sao` (`saola` và `sao`). File mở dưới id `saola` không
+  có snippet nào. Nay đăng ký cho cả hai.
+
+---
+
 ## [1.15.4] — 2026-09-07
 
 ### Sửa

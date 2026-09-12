@@ -10,6 +10,7 @@ const names = new Function(`${declaration.getText(ast)}; return _declarationName
 assert.deepEqual(names('count: number = 0, title: string = "hi"'), ['count', 'title']);
 assert.deepEqual(names('map: Record<string, Array<number>> = {}, next = 2'), ['map', 'next']);
 assert.deepEqual(names('{count: 0, user: {name: "Sao"}}: {count: number; user: {name: string}}'), ['count', 'user']);
+assert.deepEqual(names('{count = 0, user = {name: "Sao"}, flag}: {count: number; user: {name: string}; flag: boolean}'), ['count', 'user', 'flag']);
 assert.deepEqual(names('caption: string = ")", valid: boolean = 1 < 2'), ['caption', 'valid']);
 assert.deepEqual(names('read: (n: number) => number = (n) => n, total: number = 0'), ['read', 'total']);
 assert.deepEqual(names('$count = 0, $message = "hello"'), ['count', 'message']);

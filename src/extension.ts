@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SaoFormatter } from './formatters/saoFormatter';
 import { SaoDefinitionProvider } from './navigation';
+import { checkSetup, checkTemplate, CLOSURE_NAMES } from './setupCheck';
 import { doComplete, VSCodeEmmetConfig } from '@vscode/emmet-helper';
 import { TextDocument as LSTextDocument } from 'vscode-languageserver-textdocument';
 
@@ -734,17 +735,18 @@ class SaoAttributeAndTagCompletionProvider implements vscode.CompletionItemProvi
 
 // Variables always implicitly available in OneJS templates
 const _IMPLICIT_VARS = new Set([
-  // OneJS system variables
-  '__base__', '__layout__', '__page__', '__component__',
-  '__template__', '__context__', '__partial__', '__system__',
-  '__env', '__helper',
+  // Closure of the compiled view (client) — one list, shared with the setup checker
+  ...Object.keys(CLOSURE_NAMES).map(n => n.replace(/^\$/, '')),
+  // Blade/SSR side: view identity, component plumbing, context fallback pair
+  '__SSR_VIEW_ID__', '__BlockID__', '__ONE_COMPONENT_REGISTRY__', '__ONE_CHILDREN_CONTENT__',
+  '__SAO_CHILDREN_CONTENT__', '__view_fallback_from__', '__view_fallback_to__', 'module_slug', 'context',
   // `$view` — biến hệ thống trỏ tới chính view đang chạy. CHỈ có ở client
   // (handler sự kiện, <script setup>); dùng trong biểu thức được SSR render
   // thì compiler báo lỗi.
   'view',
   // Common Blade/Laravel implicit variables
-  'loop', 'this', 'errors', 'message', 'slot',
-  'app', 'request', 'auth', 'session', 'user',
+  'loop', 'this', 'errors', 'message', 'slot', 'attributes',
+  'request', 'auth', 'session', 'user',
 ]);
 // PHP superglobals: $_GET, $_POST, $_SESSION, $_COOKIE, $_SERVER, $_FILES, $_ENV, $GLOBALS
 const _IS_PHP_SUPERGLOBAL = (v: string) => /^_[A-Z]/.test(v) || v === 'GLOBALS';
@@ -1197,6 +1199,19 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
     }
   }
 
+  // <script setup>: real TypeScript diagnostics over a virtual module (see setupCheck.ts)
+  const push = (d: { start: number; length: number; message: string; code: number }, source: string, severity: vscode.DiagnosticSeverity) => {
+    const diag = new vscode.Diagnostic(
+      new vscode.Range(document.positionAt(d.start), document.positionAt(d.start + d.length)), d.message, severity);
+    diag.source = source;
+    diag.code = d.code;
+    diagnostics.push(diag);
+  };
+  checkSetup(text).forEach(d => push(d, 'SAO Script', vscode.DiagnosticSeverity.Error));
+  // Modern mode has no `$` to tell variables apart, so the template check works from the
+  // view scope instead (closure + declarations + setup functions); legacy keeps the `$var` pass above.
+  if (mode === 'modern') { checkTemplate(text).forEach(d => push(d, 'SAO Template', vscode.DiagnosticSeverity.Warning)); }
+
   collection.set(document.uri, diagnostics);
   return diagnostics;
 }
@@ -1400,13 +1415,18 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(varDiagnostics);
 
   const analyzeDoc = (doc: vscode.TextDocument) => _runAnalysis(doc, varDiagnostics);
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Analyze all already-open documents immediately
   vscode.workspace.textDocuments.forEach(analyzeDoc);
 
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument(analyzeDoc),
-    vscode.workspace.onDidChangeTextDocument(e => analyzeDoc(e.document)),
+    vscode.workspace.onDidChangeTextDocument(e => {
+      // Type check costs ~80ms per run — coalesce keystrokes.
+      clearTimeout(pending.get(e.document.uri.toString()));
+      pending.set(e.document.uri.toString(), setTimeout(() => analyzeDoc(e.document), 300));
+    }),
     vscode.window.onDidChangeActiveTextEditor(ed => { if (ed) { analyzeDoc(ed.document); } }),
     vscode.workspace.onDidCloseTextDocument(doc => varDiagnostics.delete(doc.uri))
   );

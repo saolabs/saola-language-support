@@ -146,6 +146,72 @@ async function main() {
 
     console.log('highlighting: TextMate tag, declaration and TypeScript scopes passed');
     console.log('highlighting: <script setup> body reports the typescript embedded language');
+
+    // ── Directive viết trên thẻ: #if / #elseif / #else / #switch / … ──────
+    //
+    // Chúng nằm trong grammar INJECTION. Ở đây nạp nó như grammar CHÍNH: cái
+    // cần kiểm là các regex vừa thêm, không phải cơ chế injection của VS Code
+    // (cơ chế đó đã chạy sẵn cho `:attr`). Muốn kiểm qua đường injection thật
+    // thì phải nạp cả `text.html.derivative` để có scope `meta.tag` —
+    // không đáng cho thứ này.
+    //
+    // Tên directive là tập ĐÓNG, khớp với compiler (`#foo` lạ là lỗi biên
+    // dịch). Nhờ vậy `#fff` trong `style="color: #fff"` và `#section` trong
+    // `href="#section"` KHÔNG bị tô như directive — chính là bug đã phải sửa
+    // ở phía compiler khi regex quét cả giá trị thuộc tính.
+    const injectionSource = fs.readFileSync(path.join(__dirname, 'syntaxes/sao-injection.tmLanguage.json'), 'utf8');
+    const injectedRegistry = new textmate.Registry({
+        onigLib: Promise.resolve({
+            createOnigScanner: patterns => new oniguruma.OnigScanner(patterns),
+            createOnigString: value => new oniguruma.OnigString(value),
+        }),
+        // Grammar chính vẫn phải nạp được: pattern trong injection có
+        // `include: "text.html.saola#js-expr"`, không giải được thì TOÀN BỘ
+        // pattern im lặng không khớp gì cả.
+        loadGrammar: async scopeName => {
+            if (scopeName === 'text.html.saola.injection') return textmate.parseRawGrammar(injectionSource, 'sao-injection.tmLanguage.json');
+            if (scopeName === 'text.html.saola') return textmate.parseRawGrammar(grammarSource, 'sao.tmLanguage.json');
+            return null;
+        },
+    });
+    const injected = await injectedRegistry.loadGrammar('text.html.saola.injection');
+    assert.ok(injected);
+
+    const DIRECTIVE = 'keyword.control.saola';
+    const hasDirectiveScope = (line, needle) => {
+        const tokens = injected.tokenizeLine(line).tokens;
+        const index = line.indexOf(needle);
+        assert.notEqual(index, -1, needle);
+        const token = tokens.find(item => item.startIndex <= index && item.endIndex > index);
+        return Boolean(token && token.scopes.includes(DIRECTIVE));
+    };
+
+    for (const [line, needle] of [
+        ['<a href="#" #if="cond">A</a>', '#if'],
+        ['<p #elseif="b">B</p>', '#elseif'],
+        ['<span #else>C</span>', '#else'],
+        ['<div #switch="sel">', '#switch'],
+        ['<p #case="\'a\'">A</p>', '#case'],
+        ['<span #default>x</span>', '#default'],
+        ['<li #foreach="rows as row" #key="row[\'id\']">x</li>', '#foreach'],
+        ['<li #foreach="rows as row" #key="row[\'id\']">x</li>', '#key'],
+        ['<p #for="i = 0; i < n; i++">x</p>', '#for'],
+        ['<p #while="i < n">x</p>', '#while'],
+    ]) {
+        assert.ok(hasDirectiveScope(line, needle), `directive scope for ${needle} in ${line}`);
+    }
+
+    for (const [line, needle] of [
+        ['<div style="color: #fff">x</div>', '#fff'],
+        ['<a href="#section">x</a>', '#section'],
+        ['<a title="xem #important">x</a>', '#important'],
+        ['<div class="a #b">x</div>', '#b'],
+        ['<p>giá #1 là 100</p>', '#1'],
+    ]) {
+        assert.ok(!hasDirectiveScope(line, needle), `${needle} phải KHÔNG được tô như directive: ${line}`);
+    }
+
+    console.log('highlighting: tag directives (#if/#switch/#foreach/…) scoped, plain # left alone');
 }
 
 main().catch(error => {

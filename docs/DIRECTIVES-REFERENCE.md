@@ -12,7 +12,7 @@
 3. [Xử lý Sự kiện](#xử-lý-sự-kiện)
 4. [Data Binding](#data-binding)
 5. [Attributes & Styling](#attributes--styling)
-6. [Control Flow](#control-flow)
+6. [Control Flow](#control-flow) — gồm cả dạng viết trên thẻ `#if`
 7. [Cấu trúc Template & Component](#cấu-trúc-template--component)
 8. [Tiện ích & Nâng cao](#tiện-ích--nâng-cao)
 
@@ -208,6 +208,66 @@ Saola hỗ trợ cú pháp JS-like trong `@foreach`.
     <p>Trống</p>
 @endif
 ```
+
+### Viết thẳng trên thẻ: `#if`, `#switch`, `#foreach`
+
+Khi khối chỉ bọc **đúng một thẻ**, viết directive thành thuộc tính của thẻ đó.
+Compiler hạ về đúng khối tương ứng trước khi biên dịch — ngữ nghĩa, marker và
+cách hoạt động y hệt, chỉ khác cách viết.
+
+```saola
+{{-- hai đoạn này biên dịch ra như nhau --}}
+@if(open)
+    <p class="msg">{{ label }}</p>
+@endif
+
+<p class="msg" #if="open">{{ label }}</p>
+```
+
+Chuỗi nhánh viết trên các thẻ **sibling liền kề**, chỉ cách nhau bởi khoảng trắng:
+
+```saola
+<a href="#" #if="a">A</a>
+<p #elseif="b">B</p>
+<span #else>C</span>
+```
+
+`#switch` là ngoại lệ duy nhất — nó bọc **ruột** thẻ, không bọc thẻ. Thẻ cha vẫn
+render, các con phải toàn `#case`/`#default`; `@break` do compiler tự chèn:
+
+```saola
+<div class="tabs" #switch="tab">
+    <p #case="'a'">Tab A</p>
+    <p #case="'b'">Tab B</p>
+    <span #default>Chưa chọn</span>
+</div>
+```
+
+Vòng lặp nhận kèm `#key`, thứ tự viết không quan trọng:
+
+```saola
+<li class="row" #foreach="items as item" #key="item['id']">
+    {{ item['label'] }}
+</li>
+```
+
+| Viết trên thẻ | Tương đương | Bọc gì |
+|---|---|---|
+| `#if` `#elseif` `#else` | `@if` `@elseif` `@else` | cả thẻ |
+| `#switch` | `@switch` | **ruột** thẻ |
+| `#case` `#default` | `@case` `@default` | cả thẻ con |
+| `#foreach` `#for` `#while` | `@foreach` `@for` `@while` | cả thẻ |
+| `#key` | `@key` | bổ trợ cho vòng lặp |
+
+**Khi nào dùng dạng khối:** cần bọc nhiều thẻ, bọc chữ trần, hoặc bọc một vùng
+không trùng biên thẻ — dạng viết trên thẻ không làm được.
+
+⚠️ Tên sau `#` là **tập đóng**: gõ sai như `#fi="x"` cho lỗi biên dịch ngay,
+không âm thầm thành thuộc tính HTML. Dấu `#` ở chỗ khác vẫn bình thường —
+`style="color: #fff"` và `href="#dau-trang"` không bị đụng tới.
+
+⚠️ Một thẻ chỉ mang **một** directive điều khiển (`#key` là ngoại lệ, nó đi kèm
+vòng lặp). `#if` và `#foreach` cùng thẻ cho lỗi biên dịch thay vì đoán thứ tự.
 
 ---
 

@@ -37,3 +37,7 @@ images/icon-2048-source.png
 .gitignore
 .vscode/**
 **/.DS_Store
+
+# tsserver chạy trong extension (setupCheck.ts) cần lib.*.d.ts lúc runtime —
+# `typescript` là dependency thật, không bundle; giữ lại lib sau dòng **/*.ts.
+!node_modules/typescript/lib/**

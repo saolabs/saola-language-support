@@ -368,6 +368,77 @@ Loop control statements.
 
 ---
 
+### 3.3b. Tag Directives (`#if`, `#switch`, `#foreach`)
+
+When a control-flow block wraps **exactly one tag**, it can be written as an
+attribute of that tag instead. The compiler lowers it to the equivalent block
+before any emitter sees it, so semantics, hydration markers and reactivity are
+identical — this is a spelling, not a second mechanism.
+
+```html
+<!-- these two compile to the same thing -->
+@if(open)
+    <p class="msg">{{ label }}</p>
+@endif
+
+<p class="msg" #if="open">{{ label }}</p>
+```
+
+Branch chains live on **adjacent sibling tags**, separated only by whitespace:
+
+```html
+<a href="#" #if="a">A</a>
+<p #elseif="b">B</p>
+<span #else>C</span>
+```
+
+`#switch` is the one exception: it wraps the tag's **contents**, not the tag.
+The parent still renders; every child must carry `#case` or `#default`, and
+`@break` is inserted by the compiler:
+
+```html
+<div class="tabs" #switch="tab">
+    <p #case="'a'">Tab A</p>
+    <p #case="'b'">Tab B</p>
+    <span #default>Nothing selected</span>
+</div>
+```
+
+Loops take a companion `#key`; the order the two are written does not matter:
+
+```html
+<li class="row" #foreach="items as item" #key="item['id']">
+    {{ item['label'] }}
+</li>
+```
+
+| Tag directive | Block equivalent | Wraps |
+|---|---|---|
+| `#if` `#elseif` `#else` | `@if` `@elseif` `@else` | the whole tag |
+| `#switch` | `@switch` | the tag's **contents** |
+| `#case` `#default` | `@case` `@default` | the whole child tag |
+| `#foreach` `#for` `#while` | `@foreach` `@for` `@while` | the whole tag |
+| `#key` | `@key` | loop companion |
+
+**Rules**
+
+- The name set after `#` is **closed**. An unknown name such as `#fi="x"` is a
+  compile error, never a silent HTML attribute.
+- A `#` elsewhere is untouched: `style="color: #fff"`, `href="#anchor"` and
+  `title="see #important"` all pass through unchanged. A `#` is only a directive
+  at **attribute-name position** — outside quotes, outside `@class(...)` parens,
+  and directly after whitespace.
+- One control directive per tag (`#key` excepted, it accompanies a loop).
+  `#if` together with `#foreach` is a compile error rather than a guessed
+  precedence.
+- A tag carrying a `#` directive needs an explicit closing tag.
+- Use the block form when you need to wrap **several tags**, bare text, or a
+  region that does not line up with tag boundaries.
+
+**For IDE extensions:** highlight the closed name set only, never `#[a-zA-Z]\w*`
+— otherwise every CSS colour and anchor href lights up as a directive. Treat the
+attribute value as a JS expression, the same as `:attr="..."`.
+
 ### 3.4. HTML Attribute Binding Directives
 
 Saola provides shorthand directives to bind dynamic JS variables directly to HTML attributes.
@@ -685,6 +756,7 @@ Defines CSS styles for the component. The `scoped` attribute ensures styles don'
 | Category | Directives |
 |----------|------------|
 | **Control Flow** | `@if`, `@elseif`, `@else`, `@endif`, `@switch`, `@case`, `@default`, `@break`, `@endswitch` |
+| **Tag directives** (§3.3b) | `#if`, `#elseif`, `#else`, `#switch`, `#case`, `#default`, `#foreach`, `#for`, `#while`, `#key` |
 | **Loops** | `@foreach`/`@endforeach`, `@for`/`@endfor`, `@while`/`@endwhile`, `@break`, `@continue` |
 | **Visibility** | `@show(condition)`, `@hide(condition)`, `@empty`, `@isset` |
 | **Attribute Binding** | `@class({...})`, `@style({...})`, `@attr({...})` |

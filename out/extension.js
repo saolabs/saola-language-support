@@ -38,6 +38,7 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const saoFormatter_1 = require("./formatters/saoFormatter");
 const navigation_1 = require("./navigation");
+const setupCheck_1 = require("./setupCheck");
 const emmet_helper_1 = require("@vscode/emmet-helper");
 const vscode_languageserver_textdocument_1 = require("vscode-languageserver-textdocument");
 // =============================================
@@ -640,13 +641,18 @@ class SaoAttributeAndTagCompletionProvider {
 // =============================================
 // Variables always implicitly available in OneJS templates
 const _IMPLICIT_VARS = new Set([
-    // OneJS system variables
-    '__base__', '__layout__', '__page__', '__component__',
-    '__template__', '__context__', '__partial__', '__system__',
-    '__env', '__helper',
+    // Closure of the compiled view (client) — one list, shared with the setup checker
+    ...Object.keys(setupCheck_1.CLOSURE_NAMES).map(n => n.replace(/^\$/, '')),
+    // Blade/SSR side: view identity, component plumbing, context fallback pair
+    '__SSR_VIEW_ID__', '__BlockID__', '__ONE_COMPONENT_REGISTRY__', '__ONE_CHILDREN_CONTENT__',
+    '__SAO_CHILDREN_CONTENT__', '__view_fallback_from__', '__view_fallback_to__', 'module_slug', 'context',
+    // `$view` — biến hệ thống trỏ tới chính view đang chạy. CHỈ có ở client
+    // (handler sự kiện, <script setup>); dùng trong biểu thức được SSR render
+    // thì compiler báo lỗi.
+    'view',
     // Common Blade/Laravel implicit variables
-    'loop', 'this', 'errors', 'message', 'slot',
-    'app', 'request', 'auth', 'session', 'user',
+    'loop', 'this', 'errors', 'message', 'slot', 'attributes',
+    'request', 'auth', 'session', 'user',
 ]);
 // PHP superglobals: $_GET, $_POST, $_SESSION, $_COOKIE, $_SERVER, $_FILES, $_ENV, $GLOBALS
 const _IS_PHP_SUPERGLOBAL = (v) => /^_[A-Z]/.test(v) || v === 'GLOBALS';
@@ -1132,6 +1138,19 @@ function _runAnalysis(document, collection) {
             lineStart += line.length + 1;
         }
     }
+    // <script setup>: real TypeScript diagnostics over a virtual module (see setupCheck.ts)
+    const push = (d, source, severity) => {
+        const diag = new vscode.Diagnostic(new vscode.Range(document.positionAt(d.start), document.positionAt(d.start + d.length)), d.message, severity);
+        diag.source = source;
+        diag.code = d.code;
+        diagnostics.push(diag);
+    };
+    (0, setupCheck_1.checkSetup)(text).forEach(d => push(d, 'SAO Script', vscode.DiagnosticSeverity.Error));
+    // Modern mode has no `$` to tell variables apart, so the template check works from the
+    // view scope instead (closure + declarations + setup functions); legacy keeps the `$var` pass above.
+    if (mode === 'modern') {
+        (0, setupCheck_1.checkTemplate)(text).forEach(d => push(d, 'SAO Template', vscode.DiagnosticSeverity.Warning));
+    }
     collection.set(document.uri, diagnostics);
     return diagnostics;
 }
@@ -1170,6 +1189,29 @@ function activate(context) {
     // ── Attribute, Binding & Tag Completion Provider ──────────────────────────
     const attrTagProvider = new SaoAttributeAndTagCompletionProvider();
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', attrTagProvider, ':', '<', '@', '"', "'", '{', ' '), vscode.languages.registerCompletionItemProvider('saola', attrTagProvider, ':', '<', '@', '"', "'", '{', ' '));
+    // ── `$view` member completion ───────────────────────────────────────────
+    // `$view` là biến hệ thống, không khai báo ở đâu trong file nên không có
+    // nguồn nào khác để suy ra thành viên của nó.
+    const viewMemberProvider = {
+        provideCompletionItems(doc, position) {
+            const upTo = doc.lineAt(position).text.slice(0, position.character);
+            if (!/\$view\.$/.test(upTo))
+                return undefined;
+            const emit = new vscode.CompletionItem('emit', vscode.CompletionItemKind.Method);
+            emit.insertText = new vscode.SnippetString("emit('${1:tên}'${2:, payload})");
+            emit.detail = 'emit(event, ...args): any';
+            emit.documentation = new vscode.MarkdownString('Phát sự kiện lên **cha đã `@include` view này**, không qua event bus.\n\n' +
+                'Cha lắng nghe ngay tại thẻ: `<Card @edit(openEditor) />`, hoặc bằng khoá ' +
+                '`on$edit` trong data của `@include`.\n\n' +
+                'Trả về giá trị listener trả về, nên con hỏi được cha:\n' +
+                '```sao\nif ($view.emit(\'confirm\', id) === false) return;\n```\n' +
+                'Không ai nghe thì trả `undefined`.');
+            const path = new vscode.CompletionItem('path', vscode.CompletionItemKind.Property);
+            path.detail = 'path: string — đường dẫn view';
+            return [emit, path];
+        },
+    };
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('sao', viewMemberProvider, '.'), vscode.languages.registerCompletionItemProvider('saola', viewMemberProvider, '.'));
     // ── Emmet HTML Completion Provider ──────────────────────────────────────
     // Provides context-aware HTML Emmet abbreviation expansion
     // e.g. div#test.demo → <div id="test" class="demo"></div>
@@ -1219,9 +1261,14 @@ function activate(context) {
     const varDiagnostics = vscode.languages.createDiagnosticCollection('sao-variables');
     context.subscriptions.push(varDiagnostics);
     const analyzeDoc = (doc) => _runAnalysis(doc, varDiagnostics);
+    const pending = new Map();
     // Analyze all already-open documents immediately
     vscode.workspace.textDocuments.forEach(analyzeDoc);
-    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(analyzeDoc), vscode.workspace.onDidChangeTextDocument(e => analyzeDoc(e.document)), vscode.window.onDidChangeActiveTextEditor(ed => { if (ed) {
+    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(analyzeDoc), vscode.workspace.onDidChangeTextDocument(e => {
+        // Type check costs ~80ms per run — coalesce keystrokes.
+        clearTimeout(pending.get(e.document.uri.toString()));
+        pending.set(e.document.uri.toString(), setTimeout(() => analyzeDoc(e.document), 300));
+    }), vscode.window.onDidChangeActiveTextEditor(ed => { if (ed) {
         analyzeDoc(ed.document);
     } }), vscode.workspace.onDidCloseTextDocument(doc => varDiagnostics.delete(doc.uri)));
     // Debug command: run analysis on active file and report result

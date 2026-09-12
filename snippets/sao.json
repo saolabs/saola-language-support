@@ -336,5 +336,74 @@
       "</:component>"
     ],
     "description": "Dynamic component container"
+  },
+  "Tag If": {
+    "prefix": "#if",
+    "body": "#if=\"${1:condition}\"",
+    "description": "Tag directive: render thẻ này khi điều kiện đúng (≡ @if bọc quanh thẻ)"
+  },
+  "Tag Elseif": {
+    "prefix": "#elseif",
+    "body": "#elseif=\"${1:condition}\"",
+    "description": "Tag directive: nhánh tiếp theo — phải là sibling LIỀN KỀ của thẻ mang #if"
+  },
+  "Tag Else": {
+    "prefix": "#else",
+    "body": "#else",
+    "description": "Tag directive: nhánh cuối — phải là sibling LIỀN KỀ, không nhận giá trị"
+  },
+  "Tag Switch": {
+    "prefix": "#switch",
+    "body": "#switch=\"${1:value}\"",
+    "description": "Tag directive: bọc RUỘT thẻ (thẻ cha vẫn render); con phải toàn #case/#default"
+  },
+  "Tag Case": {
+    "prefix": "#case",
+    "body": "#case=\"${1:value}\"",
+    "description": "Tag directive: một nhánh của #switch — @break do compiler tự chèn"
+  },
+  "Tag Default": {
+    "prefix": "#default",
+    "body": "#default",
+    "description": "Tag directive: nhánh mặc định của #switch, không nhận giá trị"
+  },
+  "Tag Foreach": {
+    "prefix": "#foreach",
+    "body": "#foreach=\"${1:items} as ${2:item}\" #key=\"${2:item}['${3:id}']\"",
+    "description": "Tag directive: lặp thẻ này. #key bắt buộc để hydrate đúng"
+  },
+  "Tag For": {
+    "prefix": "#for",
+    "body": "#for=\"${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++\"",
+    "description": "Tag directive: vòng for đếm"
+  },
+  "Tag While": {
+    "prefix": "#while",
+    "body": "#while=\"${1:condition}\"",
+    "description": "Tag directive: lặp khi điều kiện còn đúng"
+  },
+  "Tag Key": {
+    "prefix": "#key",
+    "body": "#key=\"${1:item}['${2:id}']\"",
+    "description": "Tag directive: khoá của item — đi kèm #foreach/#for/#while"
+  },
+  "Tag If Chain": {
+    "prefix": "b:tag-if",
+    "body": [
+      "<${1:p} #if=\"${2:condition}\">$3</${1:p}>",
+      "<${4:p} #elseif=\"${5:other}\">$6</${4:p}>",
+      "<${7:p} #else>$8</${7:p}>"
+    ],
+    "description": "Chuỗi #if/#elseif/#else — các nhánh phải là sibling liền kề, chỉ cách nhau bởi khoảng trắng"
+  },
+  "Tag Switch Block": {
+    "prefix": "b:tag-switch",
+    "body": [
+      "<${1:div} #switch=\"${2:value}\">",
+      "    <${3:p} #case=\"${4:'a'}\">$5</${3:p}>",
+      "    <${6:p} #default>$7</${6:p}>",
+      "</${1:div}>"
+    ],
+    "description": "#switch bọc ruột thẻ — mọi con phải mang #case hoặc #default, không được có nội dung lạc"
   }
 }

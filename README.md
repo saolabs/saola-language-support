@@ -60,11 +60,9 @@ The modern Saola syntax is designed to feel like modern frontend frameworks (Vue
     </div>
 </template>
 
-<script setup>
-export default {
-    mounted() {
-        console.log('Compoment mounted!');
-    }
+<script setup lang="ts">
+function started() {
+    console.log('Component mounted/started!');
 }
 </script>
 ```

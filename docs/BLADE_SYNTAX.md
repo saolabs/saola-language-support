@@ -720,28 +720,19 @@ Khai báo methods, lifecycle hooks và computed cho view. Viết thẳng trong f
 
 **Syntax:**
 ```blade
-<script setup>
-export default {
-    mounted() {
+<script setup lang="ts">
+    function started() {
         console.log('View mounted');
-        this.loadData();
-    },
-
-    methods: {
-        loadData() {
-            // Load data logic
-        },
-        handleClick() {
-            this.data.count++;
-        }
-    },
-
-    computed: {
-        fullName() {
-            return this.data.firstName + ' ' + this.data.lastName;
-        }
+        loadData();
     }
-}
+
+    async function loadData() {
+        // Load data logic
+    }
+
+    function handleClick() {
+        setCount(count + 1);
+    }
 </script>
 ```
 
@@ -775,12 +766,9 @@ Thêm `lang="ts"` để viết TypeScript: `<script setup lang="ts">`.
 
 ### 4. Organize Scripts in `<script setup>`
 ```blade
-<script setup>
-export default {
-    mounted() { /* lifecycle */ },
-    methods: { /* functions */ },
-    computed: { /* derived values */ }
-}
+<script setup lang="ts">
+    function started() { /* lifecycle */ }
+    function handleClick() { /* methods */ }
 </script>
 ```
 
@@ -800,41 +788,39 @@ export default {
 
 ## File Structure
 
-A proper `.one` file uses this structure:
+A proper `.sao` file uses this structure:
 
 ```blade
 // 1. Declare data variables
-@vars(['user', 'posts'])
+@vars(user: User, posts: Post[])
 
 // 2. Declare local state
-@useState($count, 0)
+@states({ count: 0 }: { count: number })
 
 // 3. Template
-<blade>
+<template>
     <div class="container">
-        <h1>{{ $user->name }}</h1>
-        @foreach($posts as $post)
-            <article>{{ $post->title }}</article>
+        <h1>{{ user.name }}</h1>
+        @foreach(posts as post)
+            @key(post.id)
+            <article>{{ post.title }}</article>
         @endforeach
     </div>
-</blade>
+</template>
 
-// 4. Lifecycle and methods
-<script setup>
-export default {
-    mounted() {
+// 4. Lifecycle and methods (no export default required)
+<script setup lang="ts">
+    function started() {
         console.log('Component ready');
-    },
-    methods: {
-        increment() {
-            this.state.count++;
-        }
     }
-}
+
+    function increment() {
+        setCount(count + 1);
+    }
 </script>
 
 // 5. Styles
-<style>
+<style scoped>
     .container {
         padding: 20px;
     }
@@ -845,15 +831,15 @@ export default {
 
 ## Reactive System
 
-All data from `@vars`, `@let`, `@const`, and `@useState` is **reactive**:
+All data from `@vars`, `@let`, `@const`, and `@states` is **reactive**:
 
 ```blade
-@vars(['count'])
-@useState($isVisible, false)
+@vars(count: number)
+@states({ isVisible: false }: { isVisible: boolean })
 
-<!-- Changes to $count or $isVisible automatically update UI -->
-<p @show($isVisible)>Count: {{ $count }}</p>
-<button @click(setIsVisible(!$isVisible))>Toggle</button>
+<!-- Changes to count or isVisible automatically update UI -->
+<p #if="isVisible">Count: {{ count }}</p>
+<button @click(setIsVisible(!isVisible))>Toggle</button>
 ```
 
 **How it works:**
@@ -867,22 +853,18 @@ All data from `@vars`, `@let`, `@const`, and `@useState` is **reactive**:
 ## Troubleshooting
 
 ### Issue: Reactive updates not working
-**Solution:** Ensure variables are declared with `@vars`, `@let`, or `@useState`:
+**Solution:** Ensure variables are declared with `@vars`, `@let`, or `@states`:
 ```blade
-@vars(['count'])  // ✅ Reactive
+@states({ count: 0 })  // ✅ Reactive
 ```
 
 ### Issue: Events not firing
-**Solution:** Ensure handler methods are defined in `<script setup>`:
+**Solution:** Ensure handler methods are defined as top-level functions in `<script setup>`:
 ```blade
-<script setup>
-export default {
-    methods: {
-        handleClick() {  // ✅ Defined
-            // logic
-        }
+<script setup lang="ts">
+    function handleClick() {  // ✅ Defined directly
+        // logic
     }
-}
 </script>
 ```
 

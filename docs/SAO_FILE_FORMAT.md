@@ -651,12 +651,14 @@ Mark a component as asynchronous. Place at the top level (declaration area). Thi
     @endif
 </template>
 
-<script setup>
-    export default {
-        async init() {
-            const response = await this.App.Http.get('/api/data');
-            setData(response.data);
-        }
+<script setup lang="ts">
+    function started() {
+        fetchData();
+    }
+
+    async function fetchData() {
+        const response = await App.Http.get('/api/data');
+        setData(response.data);
     }
 </script>
 ```
@@ -689,36 +691,32 @@ Similar to Vue 3, this defines the client-side logic mapped directly to the comp
 
 ```html
 <script setup lang="ts">
-import { saola } from 'saola';
-export default {
-    name: 'Counter',
-
-    {{-- Lifecycle hook (called once when component is ready) --}}
-    init() {
+    // Lifecycle hook (called once when component is ready)
+    function started() {
         console.log('Component initialized');
-    },
+    }
 
-    {{-- Methods (callable from template via @click, etc.) --}}
-    increment() {
+    // Methods (callable from template via @click, etc.)
+    function increment() {
         setCount(count + 1);
-    },
+    }
 
-    decrement() {
+    function decrement() {
         setCount(count - 1);
-    },
+    }
 
-    {{-- Async init for @await components --}}
-    async init() {
-        const response = await this.App.Http.get('/api/users');
+    // Async data fetching
+    async function loadUsers() {
+        const response = await App.Http.get('/api/users');
         setUsers(response.data);
     }
-}
 </script>
 ```
 
 **Key notes:**
-- State variables and their setters are accessible directly by name (e.g., `count`, `setCount`).
-- `this.App` provides access to the Saola runtime services (e.g., `this.App.Http` for HTTP requests).
+- **No `export default` required:** Top-level functions automatically become methods of the view controller.
+- State variables and their setters are accessible directly by name in closure scope (e.g., `count`, `setCount`) without `this.`.
+- `App` provides global access to Saola runtime services (e.g., `App.Http`, `App.Router`, `App.Event`).
 - The `lang="ts"` attribute is optional and enables TypeScript support.
 
 ### `<style scoped>`
@@ -886,7 +884,7 @@ The `.sao` syntax is a hybrid. A robust Grammar (e.g., TextMate grammar for VSCo
   - `states` -> expands to `@states({\n\t$1\n})`
   - `props` -> expands to `@props($1)`
   - `template` -> expands to `<template>\n\t$1\n</template>`
-  - `script` -> expands to `<script setup lang="ts">\nexport default {\n\t$1\n}\n</script>`
+  - `script` -> expands to `<script setup lang="ts">\n\t$1\n</script>`
 - **Directives snippets**:
   - `foreach` -> `@foreach(${1:items} as ${2:item})\n\t$3\n@endforeach`
   - `if` -> `@if(${1:condition})\n\t$2\n@endif`

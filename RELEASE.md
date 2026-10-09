@@ -1,15 +1,11 @@
-# Saola Language Support v1.0.2
+# Saola Framework Tools v1.0.3
 
-VS Code language support for .sao files: highlighting, snippets, formatting, completion and TypeScript-aware script/template diagnostics.
-
-## Compatibility
-
-VS Code ^1.75.0; bundled TypeScript runtime libraries in the VSIX.
-
-## Validation
-
-Audit, all eight test scripts, TypeScript build and VSIX packaging passed.
+VS Code tooling for .sao files: highlighting, snippets, formatting, completion and TypeScript-aware diagnostics.
 
 ## Release scope
 
-Coordinated v1.0.2 registry release using the tested v1.0.0 source. Package manifests are normalized to 1.0.2 for registry availability. Runtime source is unchanged from v1.0.0. Existing tags and previously published versions are preserved.
+Changes the Marketplace display name from Saola Language Support to Saola Framework Tools to satisfy Marketplace name uniqueness validation. Runtime source is identical to v1.0.2. Core, Compiler, Client and Builder remain at 1.0.2.
+
+## Validation
+
+TypeScript build and VSIX packaging passed; the VSIX includes the TypeScript runtime. All eight behavior test scripts passed for the unchanged v1.0.2 source.

@@ -1,11 +1,7 @@
-# Saola Framework Tools v1.0.3
+# Saola for VS Code v1.1.0
 
-VS Code tooling for .sao files: highlighting, snippets, formatting, completion and TypeScript-aware diagnostics.
+Standardizes Saola branding, adds light/dark template file icons, and completes document and selection formatting. The extension ID remains `saolabs.saola-language-support`.
 
-## Release scope
+The formatter understands template nesting and multiline attributes/directives. Bundled Prettier formats complete embedded JS/TS/CSS/SCSS/Less bodies. Sensitive text, raw blocks, partial embedded selections, and unparseable code are preserved.
 
-Changes the Marketplace display name from Saola Language Support to Saola Framework Tools to satisfy Marketplace name uniqueness validation. Runtime source is identical to v1.0.2. Core, Compiler, Client and Builder remain at 1.0.2.
-
-## Validation
-
-TypeScript build and VSIX packaging passed; the VSIX includes the TypeScript runtime. All eight behavior test scripts passed for the unchanged v1.0.2 source.
+Validation: all nine behavior test scripts pass, including activation and formatting from the packaged bundle. All 88 real templates checked are idempotent. Build and VSIX packaging pass. Changed TypeScript files pass ESLint; full-repository lint still reports the existing `no-unused-expressions` violation in `src/setupCheck.ts:277`. No Marketplace upload is performed by these commands.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>Saola template</title>
+  <path d="M7 2.75H19L25 8.75V29.25H7Z" fill="#FFF5F2" stroke="#69758B" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M19 3V9H25" fill="none" stroke="#69758B" stroke-width="1.5"/>
+  <path d="M22 12H13L9 16L13 20H19L22 23L19 26H10" fill="none" stroke="#D62D45" stroke-width="2.8" stroke-linejoin="miter"/>
+</svg>

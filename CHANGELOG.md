@@ -1,11 +1,22 @@
 # Changelog
 
-Các thay đổi đáng chú ý của **Saola Language Support**.
+Các thay đổi đáng chú ý của **Saola for VS Code**.
 
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/),
 đánh phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
 ---
+
+## [1.1.0] — 2026-10-13
+
+- Thống nhất tên hiển thị **Saola for VS Code**, tác giả **SaolaLabs**; giữ ID `saolabs.saola-language-support`.
+- Logo SVG/PNG mới và icon file riêng cho nền sáng/tối. `.sao` dùng language ID `saola`; ID `sao` vẫn tương thích.
+- Sửa bundle nạp sai `jsonc-parser/impl/format`, gây lỗi activation và làm mất các provider; esbuild chọn entry ESM và test activation từ bundle thực tế.
+- Format Selection hoạt động thật, dùng ngữ cảnh toàn file và chỉ sửa các dòng được chọn.
+- Format Document/Save căn lề template, multiline attributes/directives và format JS/TS/CSS/SCSS/Less bằng Prettier được bundle sẵn.
+- Giữ LF/CRLF, tabs/spaces, vùng whitespace nhạy cảm, comment và code chưa parse được; thêm regression tests cho formatter.
+
+Các mục 1.17.x bên dưới là lịch sử trước khi đồng bộ version Marketplace về 1.0.x.
 
 ## [1.17.0] — 2026-09-11
 

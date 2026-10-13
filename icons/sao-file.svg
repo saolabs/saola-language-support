@@ -1,13 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="sao-red" x1="11" y1="7" x2="54" y2="58" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF4D55"/>
-      <stop offset="0.48" stop-color="#E3132A"/>
-      <stop offset="1" stop-color="#A50719"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#sao-red)"/>
-  <path d="M45 17.5H24.5L17.5 24.7l7 7.3h15l7 7.3-7 7.2H19" fill="none" stroke="#FFFFFF" stroke-width="6.2" stroke-linecap="square" stroke-linejoin="round"/>
-  <rect x="42" y="14.5" width="6" height="6" rx="1.5" fill="#FFD429"/>
-  <rect x="16" y="43.5" width="6" height="6" rx="1.5" fill="#FFD429"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>Saola template</title>
+  <path d="M7 2.75H19L25 8.75V29.25H7Z" fill="#252B3A" stroke="#9BA9C2" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M19 3V9H25" fill="none" stroke="#9BA9C2" stroke-width="1.5"/>
+  <path d="M22 12H13L9 16L13 20H19L22 23L19 26H10" fill="none" stroke="#FF7068" stroke-width="2.8" stroke-linejoin="miter"/>
 </svg>

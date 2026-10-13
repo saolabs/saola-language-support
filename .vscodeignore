@@ -31,6 +31,7 @@ COMPLETION_REPORT.txt
 # Icon gốc 2048px (7.8MB) — giữ trong repo để sau này xuất lại kích thước khác,
 # nhưng KHÔNG đóng gói: marketplace chỉ cần 128–256px (images/icon.png).
 images/icon-2048-source.png
+images/one-icon.png
 
 # Lặt vặt
 .git/**

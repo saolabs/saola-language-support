@@ -1,12 +1,12 @@
 {
   "name": "saola-language-support",
-  "displayName": "Saola Framework Tools",
-  "description": "Complete Saola syntax highlighting, snippets, and formatting for .sao template files. Supports JS-like directives with autocomplete and features.",
-  "version": "1.0.3",
+  "displayName": "Saola for VS Code",
+  "description": "Language support for Saola .sao templates: syntax highlighting, completion, diagnostics, navigation, and document/selection formatting.",
+  "version": "1.1.0",
   "publisher": "saolabs",
   "author": {
-    "name": "OneJS Framework",
-    "url": "https://onejs.dev"
+    "name": "SaolaLabs",
+    "url": "https://github.com/saolabs"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,8 @@
     "Formatters"
   ],
   "keywords": [
+    "saola",
+    "saolabs",
     "laravel",
     "blade",
     "template",
@@ -32,7 +34,7 @@
   ],
   "icon": "images/icon.png",
   "galleryBanner": {
-    "color": "#FF2D55",
+    "color": "#171B26",
     "theme": "dark"
   },
   "activationEvents": [
@@ -45,15 +47,15 @@
       {
         "id": "saola",
         "aliases": [
-          "Saola Template",
+          "Saola",
           "saola",
-          "SAO"
+          "Saola Template"
         ],
         "extensions": [
           ".sao"
         ],
         "icon": {
-          "light": "./icons/sao-file.svg",
+          "light": "./icons/sao-file-light.svg",
           "dark": "./icons/sao-file.svg"
         },
         "configuration": "./language-configurations/sao.language-configuration.json"
@@ -61,14 +63,11 @@
       {
         "id": "sao",
         "aliases": [
-          "SAO Template",
+          "SAO",
           "sao"
         ],
-        "extensions": [
-          ".sao"
-        ],
         "icon": {
-          "light": "./icons/sao-file.svg",
+          "light": "./icons/sao-file-light.svg",
           "dark": "./icons/sao-file.svg"
         },
         "configuration": "./language-configurations/sao.language-configuration.json"
@@ -148,7 +147,7 @@
     "commands": [
       {
         "command": "sao.checkVariables",
-        "title": "SAO: Check Undeclared Variables (Debug)"
+        "title": "Saola: Check Undeclared Variables (Debug)"
       }
     ],
     "configurationDefaults": {
@@ -187,7 +186,7 @@
     "vscode:prepublish": "npm run package",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --external:typescript --format=cjs --platform=node --sourcemap",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --external:typescript --format=cjs --platform=node --main-fields=module,main --sourcemap",
     "esbuild": "npm run esbuild-base -- --minify",
     "esbuild-watch": "npm run esbuild-base -- --watch",
     "package": "npm run esbuild",
@@ -196,7 +195,7 @@
     "update": "npm run publish && ./update_extension.sh",
     "lint": "eslint src --ext ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "npm run compile && node test_viewpath.js && node test_comment_blind.js && node test_typed_declarations.js && node test_setup_check.js && node test_template_check.js && node test_setup_declarations.js && node test_highlighting.js && node test_tag_directive_sets.js"
+    "test": "npm run build && node test_format.js && node test_viewpath.js && node test_comment_blind.js && node test_typed_declarations.js && node test_setup_check.js && node test_template_check.js && node test_setup_declarations.js && node test_highlighting.js && node test_tag_directive_sets.js"
   },
   "dependencies": {
     "@vscode/emmet-helper": "^2.11.0",

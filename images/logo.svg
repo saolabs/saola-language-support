@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Saola</title>
+  <defs>
+    <linearGradient id="saola" x1="64" y1="64" x2="184" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B5E"/>
+      <stop offset="1" stop-color="#ED2446"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="52" fill="#171B26"/>
+  <rect x="4.5" y="4.5" width="247" height="247" rx="51.5" fill="none" stroke="#FFFFFF" stroke-opacity=".1"/>
+  <path d="M180 68H104L68 104L104 140H152L176 164L152 188H76" fill="none" stroke="url(#saola)" stroke-width="27" stroke-linejoin="miter"/>
+  <path d="M180 68L196 52M60 204L76 188" stroke="#FFF2EB" stroke-width="12"/>
+</svg>

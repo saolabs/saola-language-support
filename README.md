@@ -1,11 +1,35 @@
-# Saola Language Support
+# Saola for VS Code
 
 VS Code extension providing full syntax highlighting, snippets, and intelligent support for `.sao` (Saola Framework) template files.
 
+![Saola logo](images/icon.png)
+
+Extension ID: `saolabs.saola-language-support` (unchanged for existing installations).
+
 ## Features
 
+### Formatting
+
+- **Format Document**: use the editor context menu or `Shift+Alt+F` (`Shift+Option+F` on macOS).
+- **Format Selection**: select lines and use the editor's Format Selection command. Nesting is read from the whole file; edits stay within the selected lines.
+- Format on save uses the same formatter. Tabs/spaces and tab width follow your editor settings; LF/CRLF is preserved.
+- HTML, component tags, multiline attributes, and Modern/Legacy directives are indented. Complete `<script>` / `<script setup lang="ts">` and `<style>` bodies are formatted with bundled Prettier, including SCSS/Less.
+- Template expressions and text are kept intact. Comments, `<pre>`, `<textarea>`, `@verbatim`, and raw PHP blocks are preserved. Partial script/style selections and code Prettier cannot parse are preserved.
+
+If another formatter overrides the language settings, use **Format Document With… → Configure Default Formatter → Saola for VS Code**, or set:
+
+```json
+"[saola]": {
+    "editor.defaultFormatter": "saolabs.saola-language-support",
+    "editor.formatOnSave": true
+}
+```
+
+`.sao` files use the **Saola** language mode; the older `sao` language ID remains supported. File icons have light and dark variants. An active file icon theme can override language icons.
+
+
 ### 🚀 Dual-Syntax Highlighting
-Saola Language Support intelligently handles both **Modern** and **Legacy** syntax modes:
+Saola for VS Code intelligently handles both **Modern** and **Legacy** syntax modes:
 - **Modern Mode (JS-like)**: Clean, JavaScript-inspired syntax without the `$` prefix for variables. 
   - Perfect for use within `<template>` tags.
   - Full JavaScript highlighting for expressions using `source.js` integration.

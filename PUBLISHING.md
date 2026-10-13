@@ -1,9 +1,9 @@
-# Publish Saola Language Support
+# Publish Saola for VS Code
 
 Repository: https://github.com/saolabs/saola-language-support
 Extension ID: `saolabs.saola-language-support`.
-Manifest hiện tại: `1.17.0`; kiểm tra kho trước khi dùng version này.
-Hướng dẫn cập nhật ngày 2026-10-02.
+Manifest hiện tại: `1.1.0`; kiểm tra kho trước khi dùng version này.
+Hướng dẫn cập nhật ngày 2026-10-13.
 
 ## Build và đóng gói
 

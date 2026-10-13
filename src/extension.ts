@@ -1217,7 +1217,7 @@ function _runAnalysis(document: vscode.TextDocument, collection: vscode.Diagnost
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Template Languages extension is now active!');
+  console.log('Saola for VS Code is now active!');
 
   // ── Ensure Emmet is configured for SAO language IDs ──────────────────────
   _ensureEmmetConfig();
@@ -1231,30 +1231,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDocumentFormattingEditProvider('saola', saoFormatter)
   );
 
-  // Register range formatter (Format Selection)
+  // Register range formatter with full-document nesting context.
   context.subscriptions.push(
-    vscode.languages.registerDocumentRangeFormattingEditProvider('sao', {
-      provideDocumentRangeFormattingEdits(
-        _document: vscode.TextDocument,
-        _range: vscode.Range,
-        _options: vscode.FormattingOptions,
-        _token: vscode.CancellationToken
-      ): vscode.TextEdit[] {
-        // For range formatting, delegate to full document formatter
-        // since Blade/HTML context requires full document awareness
-        return [];
-      }
-    }),
-    vscode.languages.registerDocumentRangeFormattingEditProvider('saola', {
-      provideDocumentRangeFormattingEdits(
-        _document: vscode.TextDocument,
-        _range: vscode.Range,
-        _options: vscode.FormattingOptions,
-        _token: vscode.CancellationToken
-      ): vscode.TextEdit[] {
-        return [];
-      }
-    })
+    vscode.languages.registerDocumentRangeFormattingEditProvider('sao', saoFormatter),
+    vscode.languages.registerDocumentRangeFormattingEditProvider('saola', saoFormatter)
   );
 
   // Register onType formatting for Enter key (proper indentation on new line)

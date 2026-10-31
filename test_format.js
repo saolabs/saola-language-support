@@ -8,11 +8,16 @@ const noCancel = { isCancellationRequested: false };
 
 class Position { constructor(line, character) { this.line = line; this.character = character; } }
 class Range { constructor(start, end) { this.start = start; this.end = end; } }
+class TextEdit {
+  constructor(range, newText) { this.range = range; this.newText = newText; }
+  static replace(range, newText) { return new TextEdit(range, newText); }
+}
 const fullProviders = new Map();
 const rangeProviders = new Map();
+const onTypeProviders = new Map();
 const disposable = () => ({ dispose() {} });
 const vscode = {
-  Position, Range, TextEdit: { replace: (range, newText) => ({ range, newText }) },
+  Position, Range, TextEdit,
   workspace: {
     textDocuments: [], getConfiguration: () => ({ get: () => undefined, update: () => Promise.resolve() }),
     onDidOpenTextDocument: disposable, onDidChangeTextDocument: disposable, onDidCloseTextDocument: disposable,
@@ -20,7 +25,7 @@ const vscode = {
   languages: {
     registerDocumentFormattingEditProvider: (id, provider) => { fullProviders.set(id, provider); return disposable(); },
     registerDocumentRangeFormattingEditProvider: (id, provider) => { rangeProviders.set(id, provider); return disposable(); },
-    registerOnTypeFormattingEditProvider: disposable, registerCompletionItemProvider: disposable,
+    registerOnTypeFormattingEditProvider: (id, provider) => { onTypeProviders.set(id, provider); return disposable(); }, registerCompletionItemProvider: disposable,
     registerDefinitionProvider: disposable, registerHoverProvider: disposable,
     createDiagnosticCollection: () => ({ ...disposable(), delete() {} }),
   },
@@ -86,6 +91,19 @@ function doc(content) {
   assert.equal(literalResult.match(/`[\s\S]*`/)[0], literal.match(/`[\s\S]*`/)[0], 'multiline string value');
   assert.equal(await formatSaola(literalResult, spaces), literalResult);
 
+  const setup = '<script setup lang="ts">\nimport { Client } from "@web/client";\n@state(vm: any = { temporary: false })\n@state(prompt: string = "")\nfunction mounted() { client = new Client(); }\nconst message = `hello\n  keep literal whitespace\nend`;\n</script>\n@await\n    <template>\n@section("meta:title", "Chat")\n@block("content")\n<p>{{ prompt }}</p>\n@endblock\n    </template>';
+  const setupResult = await formatSaola(setup, spaces);
+  assert.ok(setupResult.includes('    import { Client }'));
+  assert.ok(setupResult.includes('    @state(vm: any = { temporary: false })\n    @state(prompt: string = "")'));
+  assert.ok(setupResult.includes('    function mounted()'));
+  assert.ok(setupResult.includes('</script>\n@await\n<template>\n    @section'));
+  assert.equal(setupResult.match(/`[\s\S]*`/)[0], setup.match(/`[\s\S]*`/)[0]);
+  assert.equal(await formatSaola(setupResult, spaces), setupResult, 'idempotent setup declarations');
+  const setupTabs = await formatSaola(setup, { tabSize: 4, insertSpaces: false });
+  assert.ok(setupTabs.includes('\n\t@state(prompt: string = "")'));
+  assert.equal(await formatSaola(setupTabs, { tabSize: 4, insertSpaces: false }), setupTabs);
+  assert.equal(await formatSaola(setup.replaceAll('\n', '\r\n'), spaces), setupResult.replaceAll('\n', '\r\n'));
+
   // Exercise the same providers users receive from the actual packaged entry point.
   require(process.env.SAOLA_EXTENSION_ENTRY || './dist/extension').activate({ subscriptions: [] });
   for (const id of ['sao', 'saola']) {
@@ -99,6 +117,10 @@ function doc(content) {
     assert.equal(selected[0].newText, expected.split('\n')[3], 'selection uses outer context');
     assert.deepEqual(await provider.provideDocumentFormattingEdits(doc(expected), spaces, noCancel), [], 'no unnecessary edit');
     assert.deepEqual(await provider.provideDocumentFormattingEdits(doc(input), spaces, { isCancellationRequested: true }), []);
+    const setupEdits = await provider.provideDocumentFormattingEdits(doc(setup), spaces, noCancel);
+    assert.equal(setupEdits[0].newText, setupResult);
+    const enter = onTypeProviders.get(id).provideOnTypeFormattingEdits(doc('@await\n    <template>'), new Position(1, 4), '\n', spaces, noCancel);
+    assert.equal(enter[0].newText, '', 'Enter after @await does not indent');
   }
   assert.equal(await formatSaola(embedded, spaces, 1, 1), '    const count: number = 1;\n    function add(x: number) {\n        return x + count;\n    }', 'complete selected script body');
   const partial = '<script>\nfunction f(){\nreturn 1;\n}\n</script>';
@@ -106,6 +128,8 @@ function doc(content) {
   assert.equal(await formatSaola(input, spaces, 3, 3), expected.split('\n')[3]);
 
   const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  const languageConfig = fs.readFileSync('language-configurations/sao.language-configuration.json', 'utf8');
+  assert.ok(!languageConfig.includes('|await|'), '@await is not an indentation/folding block');
   assert.equal(manifest.contributes.languages.filter(l => l.extensions?.includes('.sao')).length, 1, 'one canonical language association');
   for (const language of manifest.contributes.languages) {
     for (const icon of Object.values(language.icon)) { assert.ok(fs.existsSync(path.join(__dirname, icon)), icon); }

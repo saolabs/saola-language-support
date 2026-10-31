@@ -407,7 +407,11 @@
           "name": "punctuation.section.block.js"
         },
         {
-          "match": "(===|!==|==|!=|<=|>=|<|>|&&|\\|\\||!|\\+|-|\\*|/|%|\\?|:|\\=|\\+\\=|-\\=|\\*\\=|/\\=|%\\=|=>)",
+          "match": "=>",
+          "name": "storage.type.function.arrow.js"
+        },
+        {
+          "match": "(===|!==|==|!=|<=|>=|&&|\\|\\||\\+\\=|-\\=|\\*\\=|/\\=|%\\=|\\+|-|\\*|/|%|\\?|:|\\=|<|>|!)",
           "name": "keyword.operator.js"
         },
         {
@@ -469,7 +473,11 @@
           "name": "constant.numeric.php"
         },
         {
-          "match": "(===|==|!=|!==|<=|>=|<|>|&&|\\|\\||and|or|xor|\\+|-|\\*|/|%|\\?|:|=>)",
+          "match": "=>",
+          "name": "keyword.operator.key-value.php"
+        },
+        {
+          "match": "(===|==|!=|!==|<=|>=|&&|\\|\\||and|or|xor|\\+|-|\\*|/|%|\\?|:|<|>)",
           "name": "keyword.operator.php"
         },
         {

@@ -1505,7 +1505,7 @@ function _handleOnTypeFormatting(
   const prevIndentLevel = Math.floor(prevIndent / tabSize);
 
   // Blade opening directives
-  const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|await|block|comment|states)\b/;
+  const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|block|comment|states)\b/;
   // HTML opening tag (not void, not self-closing, support custom tags)
   const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
   // Opening brace/bracket

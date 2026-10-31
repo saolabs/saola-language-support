@@ -23,6 +23,8 @@ elif command -v antigravity-ide &> /dev/null; then
     IDE_CMD="antigravity-ide"
 elif [ -x "/Applications/Antigravity IDE.app/Contents/Resources/app/bin/antigravity-ide" ]; then
     IDE_CMD="/Applications/Antigravity IDE.app/Contents/Resources/app/bin/antigravity-ide"
+elif [ -x "$HOME/.antigravity-ide/antigravity-ide/bin/antigravity-ide" ]; then
+    IDE_CMD="$HOME/.antigravity-ide/antigravity-ide/bin/antigravity-ide"
 fi
 
 if [ -n "$IDE_CMD" ]; then

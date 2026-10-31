@@ -2,7 +2,7 @@
   "name": "saola-language-support",
   "displayName": "Saola for VS Code",
   "description": "Language support for Saola .sao templates: syntax highlighting, completion, diagnostics, navigation, and document/selection formatting.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "saolabs",
   "author": {
     "name": "SaolaLabs",
@@ -84,6 +84,19 @@
           "source.js": "javascript",
           "source.ts": "typescript"
         },
+        "balancedBracketScopes": [
+          "*"
+        ],
+        "unbalancedBracketScopes": [
+          "keyword.operator.relational",
+          "storage.type.function.arrow",
+          "keyword.operator.bitwise.shift",
+          "meta.brace.angle",
+          "punctuation.definition.tag",
+          "keyword.operator.assignment.compound.bitwise.ts",
+          "keyword.operator.js",
+          "keyword.operator.php"
+        ],
         "tokenTypes": {
           "comment": "comment",
           "comment.block.blade": "comment",
@@ -104,6 +117,19 @@
           "source.js": "javascript",
           "source.ts": "typescript"
         },
+        "balancedBracketScopes": [
+          "*"
+        ],
+        "unbalancedBracketScopes": [
+          "keyword.operator.relational",
+          "storage.type.function.arrow",
+          "keyword.operator.bitwise.shift",
+          "meta.brace.angle",
+          "punctuation.definition.tag",
+          "keyword.operator.assignment.compound.bitwise.ts",
+          "keyword.operator.js",
+          "keyword.operator.php"
+        ],
         "tokenTypes": {
           "comment": "comment",
           "comment.block.blade": "comment",

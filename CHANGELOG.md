@@ -7,6 +7,15 @@ Các thay đổi đáng chú ý của **Saola for VS Code**.
 
 ---
 
+## [1.1.1] — 2026-10-25
+
+### Sửa
+
+- **Sửa lỗi hiển thị mũi tên arrow function `=>` trong `<script>` bị đổi màu / tô đỏ**: Khai báo `unbalancedBracketScopes` cho grammar `saola` và `sao` trong `package.json` (`storage.type.function.arrow`, `keyword.operator.relational`, ...), ngăn cơ chế Bracket Pair Colorization của VS Code nhận nhầm ký tự `>` trong `=>` thành dấu ngoặc đóng không khớp (unexpected closing bracket) dẫn đến việc `>` bị tô đỏ.
+- Tách riêng pattern `=>` gán scope `storage.type.function.arrow.js` trong `#js-expr` và `#php-expr`, tránh bị khớp nhầm thành hai toán tử `=` và `>` riêng lẻ.
+
+---
+
 ## [1.1.0] — 2026-10-13
 
 - Thống nhất tên hiển thị **Saola for VS Code**, tác giả **SaolaLabs**; giữ ID `saolabs.saola-language-support`.

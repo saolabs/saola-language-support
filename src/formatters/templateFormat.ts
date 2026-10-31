@@ -11,7 +11,7 @@ const VOID = new Set(
 const BLOCKS = new Set(
   (
     'if unless foreach forelse for while switch auth guest can cannot canany section component slot ' +
-    'push prepend once isset empty env production error await block comment'
+    'push prepend once isset empty env production error block comment'
   ).split(' '),
 );
 const MIDDLE = new Set(['else', 'elseif', 'empty']);
@@ -124,7 +124,7 @@ function parserFor(tag: string, attrs: string): string | undefined {
   return undefined;
 }
 
-function indentEmbedded(source: string, prefix: string, parser: string): string[] {
+function indentEmbedded(source: string, prefix: string, parser: string, rebase = false): string[] {
   const literals: { start: number; end: number }[] = [];
   if (parser === 'babel' || parser === 'typescript') {
     const file = ts.createSourceFile(
@@ -149,17 +149,30 @@ function indentEmbedded(source: string, prefix: string, parser: string): string[
   }
   const expression = new Expression();
   let offset = 0;
-  return source.split('\n').map((line) => {
+  const lines = source.split('\n').map((line) => {
     // Prefixing a raw template/string continuation changes the literal value.
     const insideLiteral =
       parser === 'babel' || parser === 'typescript'
         ? literals.some((span) => offset > span.start && offset < span.end)
         : !!expression.quote;
-    const output = line && !insideLiteral ? prefix + line : line;
     expression.scan(line);
     offset += line.length + 1;
-    return output;
+    return { line, insideLiteral };
   });
+  // A Saola declaration is not JS/TS syntax. If parsing fails, normalize only
+  // the body's common margin; preserve relative indentation and literal values.
+  let margin: string | undefined;
+  if (rebase) {
+    for (const { line, insideLiteral } of lines) {
+      if (!line.trim() || insideLiteral) { continue; }
+      const whitespace = /^\s*/.exec(line)![0];
+      margin ??= whitespace;
+      while (!whitespace.startsWith(margin)) { margin = margin.slice(0, -1); }
+    }
+  }
+  return lines.map(({ line, insideLiteral }) =>
+    line.trim() && !insideLiteral ? prefix + line.slice(margin?.length ?? 0) : line,
+  );
 }
 
 /**
@@ -430,7 +443,10 @@ export async function formatSaola(
       output.splice(block.start, block.end - block.start + 1, ...body);
       end += body.length - (block.end - block.start + 1);
     } catch {
-      // Incomplete code, Saola directives, or unsupported syntax: preserve the body.
+      if (/^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState)\s*\(/m.test(source)) {
+        const body = indentEmbedded(source, indent.repeat(block.indent), block.parser, true);
+        output.splice(block.start, block.end - block.start + 1, ...body);
+      }
     }
   }
   return output.slice(start, end + 1).join(eol);

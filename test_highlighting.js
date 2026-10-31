@@ -85,6 +85,19 @@ async function main() {
     assert.ok(scopesAt(singleState, 'GridRow').scopes.includes('entity.name.type.ts'), 'states GridRow type');
     assert.ok(scopesAt(singleState, 'boolean').scopes.includes('support.type.primitive.ts'), 'states boolean type');
 
+    // 3b. Arrow function in directive/expression (#js-expr)
+    const arrowExpr = "@click(() => handleClick())";
+    assert.ok(scopesAt(arrowExpr, '=>').scopes.includes('storage.type.function.arrow.js'), 'arrow => in js-expr');
+
+    // 3c. package.json must declare unbalancedBracketScopes for bracket colorizer
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    for (const g of pkg.contributes.grammars) {
+        if (g.language === 'saola' || g.language === 'sao') {
+            assert.ok(Array.isArray(g.unbalancedBracketScopes), `unbalancedBracketScopes in grammar ${g.language}`);
+            assert.ok(g.unbalancedBracketScopes.includes('storage.type.function.arrow'), `storage.type.function.arrow in ${g.language}`);
+        }
+    }
+
     // 4. <script setup> body must report the TypeScript embedded language id.
     //    VS Code picks the comment syntax (// vs {{-- --}}) from the language at
     //    the cursor, and that id comes from `contentName` matching a key in

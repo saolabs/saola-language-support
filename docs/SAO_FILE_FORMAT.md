@@ -428,9 +428,10 @@ Loops take a companion `#key`; the order the two are written does not matter:
   `title="see #important"` all pass through unchanged. A `#` is only a directive
   at **attribute-name position** — outside quotes, outside `@class(...)` parens,
   and directly after whitespace.
-- One control directive per tag (`#key` excepted, it accompanies a loop).
-  `#if` together with `#foreach` is a compile error rather than a guessed
-  precedence.
+- Combining directives on the same tag is allowed across different categories.
+  Wrapping order is fixed (outer to inner):
+  `#case`/`#default` > `#elseif`/`#else` > loop (`#foreach`/`#for`/`#while` + `#key`) > `#if` > `#switch`.
+  For example, `<button #foreach="list as item" #key="item.id" #if="!item.hidden">` wraps the item with `foreach` then `if` (filtering each element). Multiple directives of the same slot on one tag (e.g. two loops or `#case` + `#default`) are disallowed.
 - A tag carrying a `#` directive needs an explicit closing tag.
 - Use the block form when you need to wrap **several tags**, bare text, or a
   region that does not line up with tag boundaries.

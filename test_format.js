@@ -104,6 +104,23 @@ function doc(content) {
   assert.equal(await formatSaola(setupTabs, { tabSize: 4, insertSpaces: false }), setupTabs);
   assert.equal(await formatSaola(setup.replaceAll('\n', '\r\n'), spaces), setupResult.replaceAll('\n', '\r\n'));
 
+  const policySetup = '<script setup lang="ts">\n@middleware([\n"requireLogin",\n"profile:complete"\n])\n@useAuth()\n@state(count: number = 0)\nfunction reset(){setCount(0);set__auth__(null)}\nconst literal=`keep\n@useAuth()\n@middleware("example")\nend`;\n/*\n@middleware("comment")\n*/\n</script>';
+  const policyResult = await formatSaola(policySetup, spaces);
+  assert.ok(policyResult.includes('    @middleware([\n        "requireLogin",\n        "profile:complete"\n    ])'));
+  assert.ok(policyResult.includes('    @useAuth()\n    @state(count: number = 0)'));
+  assert.ok(policyResult.includes('    function reset() {\n        setCount(0);\n        set__auth__(null);\n    }'), 'JS formats despite setup directives');
+  assert.equal(policyResult.match(/`[\s\S]*`/)[0], policySetup.match(/`[\s\S]*`/)[0], 'directive examples inside template literal stay literal');
+  assert.equal(await formatSaola(policyResult, spaces), policyResult, 'metadata format is idempotent');
+  assert.equal(await formatSaola(policySetup.replaceAll('\n','\r\n'), spaces), policyResult.replaceAll('\n','\r\n'));
+  for (const flag of ['@useAuth','@useAuth()','@useauth','@useauth()']) {
+    const formatted = await formatSaola(`<script setup>\n${flag}\nfunction f(){return __auth__}\n</script>`, spaces);
+    assert.ok(formatted.includes(`    ${flag}\n    function f() {\n        return __auth__;\n    }`));
+  }
+  const oneLine = await formatSaola('<script setup lang="ts">const n:number=1;function f(){return n+1}</script>\n<style>.x{color:red}</style>', spaces);
+  assert.ok(oneLine.includes('<script setup lang="ts">\n    const n: number = 1;\n    function f() {'));
+  assert.ok(oneLine.includes('<style>\n    .x {\n        color: red;\n    }\n</style>'));
+  assert.equal(await formatSaola(oneLine, spaces), oneLine);
+
   // Exercise the same providers users receive from the actual packaged entry point.
   require(process.env.SAOLA_EXTENSION_ENTRY || './dist/extension').activate({ subscriptions: [] });
   for (const id of ['sao', 'saola']) {
@@ -119,6 +136,8 @@ function doc(content) {
     assert.deepEqual(await provider.provideDocumentFormattingEdits(doc(input), spaces, { isCancellationRequested: true }), []);
     const setupEdits = await provider.provideDocumentFormattingEdits(doc(setup), spaces, noCancel);
     assert.equal(setupEdits[0].newText, setupResult);
+    const policyEdits = await provider.provideDocumentFormattingEdits(doc(policySetup), spaces, noCancel);
+    assert.equal(policyEdits[0].newText, policyResult, 'packaged metadata formatter matches source');
     const enter = onTypeProviders.get(id).provideOnTypeFormattingEdits(doc('@await\n    <template>'), new Position(1, 4), '\n', spaces, noCancel);
     assert.equal(enter[0].newText, '', 'Enter after @await does not indent');
   }

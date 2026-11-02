@@ -317,6 +317,9 @@ const BLADE_DIRECTIVES = [
   { label: '@let', detail: 'Mutable local; optional name: Type = value', insertText: '@let(${1:varName = value})' },
   { label: '@const', detail: 'Constant; optional name: Type = value', insertText: '@const(${1:NAME = value})' },
   { label: '@computed', detail: 'Lazy computed; optional type; script reads get$name()', insertText: '@computed(${1:fullName} = ${2:first + \' \' + last})' },
+  { label: '@middleware', detail: 'Client route middleware aliases; outside template or top-level script setup', insertText: "@middleware('${1:requireLogin}')" },
+  { label: '@useAuth', detail: 'Reactive __auth__ state and set__auth__(value), synchronized with App.Auth', insertText: '@useAuth()' },
+  { label: '@useauth', detail: 'Alias of @useAuth()', insertText: '@useauth()' },
 
   // --- Reactive State ---
   { label: '@states', detail: 'Declare reactive state (JS Object)', insertText: '@states({\n\t${1:count: 0}\n})' },

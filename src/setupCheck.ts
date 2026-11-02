@@ -33,7 +33,27 @@ export const CLOSURE_NAMES: Record<string, string> = {
   View: 'any', ViewController: 'any', app: 'any', Application: 'any',
 };
 
-const DECLARATION = /^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState)\s*\(/gm;
+const DECLARATION = /^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState|middleware)\s*\(/gm;
+
+/** Literal/comment spans must stay opaque when recognizing setup declarations. */
+export function setupLiteralRanges(source: string): Array<{start: number; end: number}> {
+  const ranges: Array<{start: number; end: number}> = [];
+  const file = ts.createSourceFile('setup.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const visit = (node: ts.Node) => {
+    if (ts.isStringLiteralLike(node) || ts.isTemplateExpression(node) || ts.isRegularExpressionLiteral(node)) {
+      ranges.push({start:node.getStart(file),end:node.end});
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, source);
+  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+    if (token === ts.SyntaxKind.MultiLineCommentTrivia || token === ts.SyntaxKind.SingleLineCommentTrivia) {
+      ranges.push({start:scanner.getTokenPos(),end:scanner.getTextPos()});
+    }
+  }
+  return ranges;
+}
 
 /** Diagnostic codes that are noise here: unresolved module paths (aliases live in the bundler). */
 const IGNORED = new Set([2307, 2792, 1192, 1259, 1471]);
@@ -56,7 +76,7 @@ class Builder {
 }
 
 /** Index just past the `)` matching the `(` at `open`, or -1. */
-function closeParen(s: string, open: number): number {
+export function closeParen(s: string, open: number): number {
   let depth = 0, quote = '';
   for (let i = open; i < s.length; i++) {
     const c = s[i];
@@ -145,8 +165,24 @@ export function setupBlock(source: string): { body: string; offset: number } | u
 /** Rebuild the view as one TypeScript module with a source map back to `source` offsets. */
 export function buildVirtual(source: string): Builder {
   const masked = maskComments(source);
+  // Auth is a compiler declaration, not a TypeScript decorator. Keep offsets
+  // stable while providing its reserved state and ordinary setter to tsserver.
+  const authFlags = /^[ \t]*@useauth\b(?:[ \t]*\(\s*\))?[ \t]*;?/gim;
+  let usesAuth = false;
   const block = setupBlock(masked) ?? { body: '', offset: 0 };
+  const stripAuth = (text: string) => {
+    const ranges = setupLiteralRanges(text);
+    return text.replace(authFlags, (match: string, offset: number) => {
+      const at = offset + match.indexOf('@');
+      if (ranges.some(range => at >= range.start && at < range.end)) return match;
+      usesAuth = true;
+      return blank(match);
+    });
+  };
+  const outside = stripAuth(outsideRegion(masked));
+  const body = stripAuth(block.body);
   const b = new Builder();
+  if (usesAuth) b.gen('declare let __auth__: any; declare function set__auth__(value: any): void;\n');
   for (const [name, type] of Object.entries(CLOSURE_NAMES)) { b.gen(`declare const ${name}: ${type};\n`); }
   const anyNames = new Set<string>();
   const states: string[] = [];
@@ -154,8 +190,11 @@ export function buildVirtual(source: string): Builder {
 
   const emit = (text: string, offset: number, declarationsOnly: boolean) => {
     let pos = 0;
+    const ranges = setupLiteralRanges(text);
     DECLARATION.lastIndex = 0;
     for (let m = DECLARATION.exec(text); m; m = DECLARATION.exec(text)) {
+      const at = m.index + m[0].indexOf('@');
+      if (ranges.some(range => at >= range.start && at < range.end)) continue;
       const open = m.index + m[0].length - 1;
       const end = closeParen(text, open);
       if (end < 0) { break; }
@@ -164,7 +203,9 @@ export function buildVirtual(source: string): Builder {
       const inner = text.slice(innerStart, end - 1);
       const kind = m[1];
       const trimmed = inner.trim();
-      if (kind === 'importView') {
+      if (kind === 'middleware') {
+        // Static navigation metadata does not introduce a setup binding.
+      } else if (kind === 'importView') {
         const alias = /\bas\s+([A-Za-z_]\w*)\s*$/.exec(trimmed);
         if (alias) { anyNames.add(alias[1]); }
       } else if (kind === 'useState' || kind === 'assets') {
@@ -201,8 +242,8 @@ export function buildVirtual(source: string): Builder {
   };
 
   // Declarations outside the script share the view scope and are hoisted before it.
-  emit(outsideRegion(masked), 0, true);
-  emit(block.body, block.offset, false);
+  emit(outside, 0, true);
+  emit(body, block.offset, false);
   // Module scope: top-level names must not collide with lib.dom globals (`status`, `name`…).
   b.gen('\nexport {};\n');
   for (const n of anyNames) { b.gen(`declare let ${n}: any;\n`); }

@@ -34,3 +34,11 @@ assert.deepEqual(msgs(sao(`import type { G } from '@web/app/x';\n@state(g: G = n
 // Không có <script setup> → im lặng.
 assert.deepEqual(checkSetup('<template><div></div></template>'), []);
 console.log('setup check: all checks passed');
+
+for (const flag of ['@useAuth','@useAuth()','@useauth','@useauth()']) {
+    assert.deepEqual(msgs(sao(`${flag}\n@middleware(['requireLogin', 'profile:complete'])\nfunction clear(){set__auth__(null);return __auth__}`)), []);
+}
+const examples = sao('const example = `demo\n@useAuth()\n@middleware("example")\n`;\nfunction f(){return __auth__}');
+assert.ok(msgs(examples).includes('2304:__auth__'), 'literal @useAuth cannot introduce a real binding');
+const metadataTypo = sao('@middleware("requireLogin")\n@useAuth\nfunction f(){return unknownName}');
+assert.ok(msgs(metadataTypo).includes('2304:unknownName'), 'diagnostic offsets survive metadata masking');

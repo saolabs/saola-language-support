@@ -4,6 +4,7 @@ import * as estree from 'prettier/plugins/estree';
 import * as typescript from 'prettier/plugins/typescript';
 import * as postcss from 'prettier/plugins/postcss';
 import * as ts from 'typescript';
+import { closeParen, setupLiteralRanges } from '../setupCheck';
 
 const VOID = new Set(
   'area base br col embed hr img input link meta param source track wbr'.split(' '),
@@ -16,7 +17,7 @@ const BLOCKS = new Set(
 );
 const MIDDLE = new Set(['else', 'elseif', 'empty']);
 type Frame = { name: string; kind: 'tag' | 'directive' | 'case' };
-type Embedded = { start: number; end: number; indent: number; parser: string };
+type Embedded = { start: number; end: number; indent: number; parser: string; source?: string; opening?: string; closing?: string };
 type Options = { tabSize: number; insertSpaces: boolean };
 
 /** Ignore quoted strings and comments when tracking a multi-line directive expression. */
@@ -175,6 +176,43 @@ function indentEmbedded(source: string, prefix: string, parser: string, rebase =
   );
 }
 
+/** Replace setup declarations with valid statements before handing code to Prettier. */
+function protectDeclarations(source: string): { text: string; originals: Map<string, string> } {
+  const originals = new Map<string, string>();
+  let prefix = '__SAOLA_FORMAT_DECL_';
+  while (source.includes(prefix)) prefix += '_';
+  const literals = setupLiteralRanges(source);
+  const pattern = /^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState|middleware|useAuth|useauth)\b/gm;
+  let text = '', pos = 0;
+  for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
+    const at = source.indexOf('@', match.index);
+    if (literals.some(span => at >= span.start && at < span.end)) continue;
+    const tail = source.slice(pattern.lastIndex);
+    const paren = /^[ \t]*\(/.exec(tail);
+    let end = paren ? closeParen(source, pattern.lastIndex + paren[0].length - 1) : pattern.lastIndex;
+    if ((!paren && !/^useauth$/i.test(match[1])) || end < 0) continue;
+    if (source[end] === ';') end++;
+    const token = `${prefix}${originals.size}__`;
+    originals.set(token, source.slice(at, end));
+    text += source.slice(pos, match.index) + `${token}();`;
+    pos = end;
+    pattern.lastIndex = end;
+  }
+  return {text:text + source.slice(pos), originals};
+}
+
+function indentDeclaration(source: string, prefix: string, unit: string): string[] {
+  const expression = new Expression();
+  return source.split('\n').map((line, index) => {
+    const preserve = !!expression.quote;
+    const depth = expression.depth;
+    const closers = expression.scan(line);
+    if (preserve || !line.trim()) return line;
+    const level = index === 0 ? 0 : closers > 0 ? Math.max(0, depth - closers - 1) : Math.max(1, depth - 1);
+    return prefix + unit.repeat(level) + line.trimStart();
+  });
+}
+
 /**
  * Keep template text and expressions verbatim; format structural indentation and
  * complete JS/TS/CSS bodies. Selection boundaries refer to the ORIGINAL lines.
@@ -318,6 +356,19 @@ export async function formatSaola(
       continue;
     }
 
+    // A complete one-line script/style can expand into a normally formatted block.
+    const inline = /^<(script|style)\b/i.exec(text);
+    if (inline) {
+      const openingEnd = tagEnd(text).end;
+      const closing = new RegExp(`</${inline[1]}\\s*>$`, 'i').exec(text);
+      const parser = parserFor(inline[1].toLowerCase(), text.slice(0, openingEnd + 1));
+      if (parser && openingEnd >= 0 && closing && closing.index > openingEnd) {
+        const opening = text.slice(0, openingEnd + 1);
+        embedded.push({start:i,end:i,indent:stack.length + 1,parser,opening,closing:closing[0],source:text.slice(openingEnd + 1,closing.index)});
+        continue;
+      }
+    }
+
     const directive = /^@(\w+)\b/.exec(text);
     if (directive) {
       const name = directive[1].toLowerCase();
@@ -426,24 +477,34 @@ export async function formatSaola(
     if (block.start < start || block.end > end || block.end < block.start) {
       continue;
     }
-    const source = lines.slice(block.start, block.end + 1).join('\n');
+    const originalSource = block.source ?? lines.slice(block.start, block.end + 1).join('\n');
+    // Remove the enclosing tag's margin before formatting. Prettier preserves
+    // block-comment interiors; repeatedly adding that margin causes indent drift.
+    const source = indentEmbedded(originalSource, '', block.parser, true).join('\n');
     try {
-      const formatted = await format(source, {
+      const declarations = ['babel','typescript'].includes(block.parser) ? protectDeclarations(source) : {text:source,originals:new Map<string,string>()};
+      const formatted = await format(declarations.text, {
         parser: block.parser,
         plugins: [babel, estree, typescript, postcss],
         tabWidth: options.tabSize || 4,
         useTabs: options.insertSpaces === false,
         embeddedLanguageFormatting: 'off',
       });
-      const body = indentEmbedded(
+      let body = indentEmbedded(
         formatted.replace(/\n$/, ''),
         indent.repeat(block.indent),
         block.parser,
       );
+      body = body.flatMap(line => {
+        const marker = /^(\s*)([A-Za-z_]\w*)\(\);$/.exec(line);
+        const original = marker && declarations.originals.get(marker[2]);
+        return original ? indentDeclaration(original, marker![1], indent) : [line];
+      });
+      if (block.opening) body = [indent.repeat(block.indent - 1) + block.opening, ...body, indent.repeat(block.indent - 1) + block.closing];
       output.splice(block.start, block.end - block.start + 1, ...body);
       end += body.length - (block.end - block.start + 1);
     } catch {
-      if (/^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState)\s*\(/m.test(source)) {
+      if (!block.opening && /^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState|middleware|useAuth|useauth)\b/m.test(source)) {
         const body = indentEmbedded(source, indent.repeat(block.indent), block.parser, true);
         output.splice(block.start, block.end - block.start + 1, ...body);
       }

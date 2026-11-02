@@ -250,6 +250,16 @@
     "body": "@computed(${1:fullName} = ${2:first + ' ' + last})",
     "description": "Derived state with memoization — chỉ tính lại khi dependency đổi, dùng như state thường trong {{ }} / attr / @if"
   },
+  "Middleware": {
+    "prefix": "b:middleware",
+    "body": "@middleware('${1:requireLogin}')",
+    "description": "Client route middleware; outside template or top-level script setup"
+  },
+  "Use Auth": {
+    "prefix": ["b:useAuth", "b:useauth"],
+    "body": "@useAuth()",
+    "description": "Reactive __auth__ state, synchronized with App.Auth; setter set__auth__(value)"
+  },
   "Import": {
     "prefix": "b:import",
     "body": "@import(__template__ + '${1:path}' as ${2:Name})",

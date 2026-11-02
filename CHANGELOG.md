@@ -7,6 +7,16 @@ Các thay đổi đáng chú ý của **Saola for VS Code**.
 
 ---
 
+## [1.2.0] — 2026-11-02
+
+- Thêm completion, snippet và tô màu `@middleware(...)`, `@useAuth`/`@useauth` trong `<script setup>` và ngoài template.
+- Type checker nhận biết metadata middleware và state `__auth__` cùng setter `set__auth__`, giữ đúng vị trí diagnostic.
+- Format JS/TS trong setup có directive thay vì chỉ căn lề; giữ nguyên chuỗi nhiều dòng và ví dụ directive trong comment/string.
+- Căn lề directive nhiều dòng, format script/style viết một dòng và sửa lệch lề comment sau nhiều lần format.
+- Kiểm thử formatter source và bundle VSIX, tính ổn định khi format lại, CRLF, selection và các alias auth.
+
+---
+
 ## [1.1.1] — 2026-10-25
 
 ### Sửa

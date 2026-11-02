@@ -40,6 +40,11 @@ async function main() {
 
     // 2. Directives inside <script setup lang="ts">
     const scriptStack = tagSetup.ruleStack;
+    for (const declaration of ["@middleware('requireLogin')", '@middleware(["auth", "role:admin"])', '@useAuth', '@useAuth()', '@useauth', '@useauth()']) {
+        const name = declaration.match(/^@\w+/)[0];
+        assert.ok(scopesAt(declaration, name, scriptStack).scopes.includes('keyword.blade'), `setup ${name}`);
+        assert.ok(scopesAt(declaration, name).scopes.includes('keyword.blade'), `outside ${name}`);
+    }
 
     const propDecl = "    @props({initial: 0, title: 'Khai báo trong setup'}: {initial: number; title: string})";
     assert.ok(scopesAt(propDecl, 'number', scriptStack).scopes.includes('support.type.primitive.ts'), 'prop number type');

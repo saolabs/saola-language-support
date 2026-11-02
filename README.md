@@ -114,6 +114,13 @@ Type `b:` to access Saola-specific snippets:
 - `b:state` -> `@state(varName = value)`
 - `b:import` -> `@import(__template__ + 'path' as Alias)`
 - `b:foreach` -> `@foreach(items as item) ... @endforeach`
+- `b:middleware` -> `@middleware('requireLogin')`
+- `b:useAuth` / `b:useauth` -> `@useAuth()` with `__auth__` and `set__auth__(value)`
+
+Middleware and auth declarations work outside the template or at top level in
+`<script setup>`. Format Document/Selection formats JS/TS around declarations,
+indents multiline declarations, and preserves literal string contents. Complete
+one-line script/style blocks are expanded and formatted too.
 
 ---
 

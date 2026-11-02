@@ -7,6 +7,14 @@ Các thay đổi đáng chú ý của **Saola for VS Code**.
 
 ---
 
+## [1.2.1] — 2026-11-02
+
+- Đồng bộ logo extension và file `.sao` sang hình đầu sao la; giữ các biến thể tương phản cho nền sáng/tối.
+- Thay ảnh nguồn OneJS, ảnh One/Laravel cũ và icon chữ S bằng cùng một mẫu sao la.
+- `images/logo.svg` là nguồn vector; `icon.png` (256px), `icon-2048-source.png` (2048px) và ảnh tương thích `one-icon.png` được xuất từ nguồn này.
+
+---
+
 ## [1.2.0] — 2026-11-02
 
 - Thêm completion, snippet và tô màu `@middleware(...)`, `@useAuth`/`@useauth` trong `<script setup>` và ngoài template.

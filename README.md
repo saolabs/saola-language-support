@@ -126,6 +126,10 @@ one-line script/style blocks are expanded and formatted too.
 
 ## Changelog
 
+The vector logo source is `images/logo.svg`. The 256px Marketplace icon and
+2048px PNG are exported from it; the file icons in `icons/` use the same saola
+mark with contrast variants for light and dark themes.
+
 ### Version 1.7.7
 - **Major Syntax Coloring Overhaul**: Switched to `source.js` for all modern expressions. Variables (`userAvatar`), Functions (`useState`), and Operators (`=, +, []`) now follow standard JavaScript colors for maximum readability.
 - **Improved Foreach Highlighting**: Added specific keyword support for `as` within modern `@foreach` loops.

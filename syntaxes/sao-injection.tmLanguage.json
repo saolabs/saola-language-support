@@ -145,69 +145,6 @@
       "name": "keyword.blade"
     },
     {
-      "comment": "Saola tag directive with double quotes - #if=\"expr\". Tên là tập ĐÓNG (compiler coi #foo lạ là lỗi biên dịch), nên #fff trong style=\"color: #fff\" không bị tô nhầm.",
-      "begin": "(?<![A-Za-z0-9_@#])(#(?:if|elseif|switch|case|foreach|for|while|key))\\s*(=)\\s*(\")",
-      "beginCaptures": {
-        "1": {
-          "name": "keyword.control.saola entity.other.attribute-name.html"
-        },
-        "2": {
-          "name": "punctuation.separator.key-value.html"
-        },
-        "3": {
-          "name": "punctuation.definition.string.begin.html string.quoted.double.html"
-        }
-      },
-      "end": "\"",
-      "endCaptures": {
-        "0": {
-          "name": "punctuation.definition.string.end.html string.quoted.double.html"
-        }
-      },
-      "contentName": "meta.embedded.inline.js",
-      "patterns": [
-        {
-          "include": "text.html.saola#js-expr"
-        }
-      ]
-    },
-    {
-      "comment": "Saola tag directive with single quotes - #if=\"expr\". Tên là tập ĐÓNG (compiler coi #foo lạ là lỗi biên dịch), nên #fff trong style=\"color: #fff\" không bị tô nhầm.",
-      "begin": "(?<![A-Za-z0-9_@#])(#(?:if|elseif|switch|case|foreach|for|while|key))\\s*(=)\\s*(')",
-      "beginCaptures": {
-        "1": {
-          "name": "keyword.control.saola entity.other.attribute-name.html"
-        },
-        "2": {
-          "name": "punctuation.separator.key-value.html"
-        },
-        "3": {
-          "name": "punctuation.definition.string.begin.html string.quoted.single.html"
-        }
-      },
-      "end": "'",
-      "endCaptures": {
-        "0": {
-          "name": "punctuation.definition.string.end.html string.quoted.single.html"
-        }
-      },
-      "contentName": "meta.embedded.inline.js",
-      "patterns": [
-        {
-          "include": "text.html.saola#js-expr"
-        }
-      ]
-    },
-    {
-      "comment": "Saola tag directive không nhận giá trị - #else, #default",
-      "match": "(?<![A-Za-z0-9_@#])(#(?:else|default))(?![\\w-])",
-      "captures": {
-        "1": {
-          "name": "keyword.control.saola entity.other.attribute-name.html"
-        }
-      }
-    },
-    {
       "comment": "Saola bound attribute with double quotes - :attr=\"expr\"",
       "begin": "(?<![A-Za-z0-9_@])(:[a-zA-Z_][a-zA-Z0-9_:-]*)\\s*(=)\\s*(\")",
       "beginCaptures": {

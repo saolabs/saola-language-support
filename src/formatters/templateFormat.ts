@@ -5,6 +5,7 @@ import * as typescript from 'prettier/plugins/typescript';
 import * as postcss from 'prettier/plugins/postcss';
 import * as ts from 'typescript';
 import { closeParen, setupLiteralRanges } from '../setupCheck';
+import { DIRECTIVE, ECHO, ECHO_END, Expression, TAG, TagEnd } from '../templateSyntax';
 
 const VOID = new Set(
   'area base br col embed hr img input link meta param source track wbr'.split(' '),
@@ -12,99 +13,41 @@ const VOID = new Set(
 const BLOCKS = new Set(
   (
     'if unless foreach forelse for while switch auth guest can cannot canany section component slot ' +
-    'push prepend once isset empty env production error block comment'
+    'push pushonce pushif prepend prependonce once isset empty env production error block ' +
+    'hassection sectionmissing wrapper serverside clientside'
   ).split(' '),
 );
-const MIDDLE = new Set(['else', 'elseif', 'empty']);
+const RAW_TAGS = new Set(['pre', 'textarea', 'script', 'style']);
+const RAW_DIRECTIVES = new Set(['verbatim', 'php', 'script', 'comment']);
+const SECTION_ENDS = new Set(['show', 'stop', 'overwrite', 'append']);
+
+function blockName(name: string): string {
+  if (['ssr', 'usessr'].includes(name)) return 'serverside';
+  if (['csr', 'usecsr'].includes(name)) return 'clientside';
+  return name === 'wrap' ? 'wrapper' : name;
+}
+
+function branchOwner(name: string, hasArgs: boolean): string[] {
+  if (name === 'empty' && !hasArgs) return ['forelse'];
+  if (name === 'elseauth') return ['auth'];
+  if (name === 'elseguest') return ['guest'];
+  if (name === 'elseif') return ['if'];
+  if (name === 'else') return ['if', 'unless', 'auth', 'guest', 'can', 'cannot', 'canany', 'isset', 'empty', 'hassection', 'sectionmissing'];
+  return [];
+}
+
 type Frame = { name: string; kind: 'tag' | 'directive' | 'case' };
 type Embedded = { start: number; end: number; indent: number; parser: string; source?: string; opening?: string; closing?: string };
 type Options = { tabSize: number; insertSpaces: boolean };
 
-/** Ignore quoted strings and comments when tracking a multi-line directive expression. */
-class Expression {
-  depth = 0;
-  quote = '';
-  comment = false;
-  scan(text: string): number {
-    let leadingClosers = 0;
-    let leading = true;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (this.comment) {
-        if (text.startsWith('*/', i)) {
-          this.comment = false;
-          i++;
-        }
-        continue;
-      }
-      if (this.quote) {
-        if (ch === '\\') {
-          i++;
-        } else if (ch === this.quote) {
-          this.quote = '';
-        }
-        continue;
-      }
-      if (text.startsWith('//', i)) {
-        break;
-      }
-      if (text.startsWith('/*', i)) {
-        this.comment = true;
-        i++;
-        continue;
-      }
-      if ('\'"`'.includes(ch)) {
-        this.quote = ch;
-        leading = false;
-        continue;
-      }
-      if ('([{'.includes(ch)) {
-        this.depth++;
-      }
-      if (')]}'.includes(ch)) {
-        this.depth--;
-        if (leading) {
-          leadingClosers++;
-        }
-      } else if (!/\s/.test(ch)) {
-        leading = false;
-      }
-    }
-    return leadingClosers;
-  }
-}
-
-/** A tag ends at an unquoted >, never at an arrow/comparison inside a binding. */
-function tagEnd(text: string, quote = ''): { end: number; quote: string } {
-  let echo = '';
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (quote) {
-      if (ch === '\\') {
-        i++;
-      } else if (ch === quote) {
-        quote = '';
-      }
-    } else if (echo) {
-      if (text.startsWith(echo, i)) {
-        i += echo.length - 1;
-        echo = '';
-      }
-    } else if (text.startsWith('{{', i) || text.startsWith('{!!', i)) {
-      echo = text.startsWith('{{', i) ? '}}' : '!!}';
-      i += echo === '}}' ? 1 : 2;
-    } else if (ch === '"' || ch === "'") {
-      quote = ch;
-    } else if (ch === '>') {
-      return { end: i, quote: '' };
-    }
-  }
-  return { end: -1, quote };
-}
-
 function parserFor(tag: string, attrs: string): string | undefined {
-  const lang = /\blang\s*=\s*['"]([^'"]+)['"]/i.exec(attrs)?.[1].toLowerCase();
-  const type = /\btype\s*=\s*['"]([^'"]+)['"]/i.exec(attrs)?.[1].toLowerCase();
+  const attributes = new Map<string, string>();
+  const attribute = /\s+([^\s=<>'"]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
+  for (const [, name, doubleQuoted, singleQuoted, unquoted] of attrs.matchAll(attribute)) {
+    attributes.set(name.toLowerCase(), (doubleQuoted ?? singleQuoted ?? unquoted ?? '').toLowerCase());
+  }
+  const lang = attributes.get('lang');
+  const type = attributes.get('type');
   if (tag === 'style') {
     if (!lang || ['css', 'scss', 'less'].includes(lang)) {
       return lang || 'css';
@@ -129,11 +72,11 @@ function indentEmbedded(source: string, prefix: string, parser: string, rebase =
   const literals: { start: number; end: number }[] = [];
   if (parser === 'babel' || parser === 'typescript') {
     const file = ts.createSourceFile(
-      'format.tsx',
+      'format.ts',
       source,
       ts.ScriptTarget.Latest,
       true,
-      ts.ScriptKind.TSX,
+      ts.ScriptKind.TS,
     );
     const visit = (node: ts.Node) => {
       if (
@@ -191,7 +134,7 @@ function protectDeclarations(source: string): { text: string; originals: Map<str
     const paren = /^[ \t]*\(/.exec(tail);
     let end = paren ? closeParen(source, pattern.lastIndex + paren[0].length - 1) : pattern.lastIndex;
     if ((!paren && !/^useauth$/i.test(match[1])) || end < 0) continue;
-    if (source[end] === ';') end++;
+    end += /^[ \t]*;/.exec(source.slice(end))?.[0].length ?? 0;
     const token = `${prefix}${originals.size}__`;
     originals.set(token, source.slice(at, end));
     text += source.slice(pos, match.index) + `${token}();`;
@@ -213,9 +156,235 @@ function indentDeclaration(source: string, prefix: string, unit: string): string
   });
 }
 
+function indentUnit(options: Options): string {
+  return options.insertSpaces === false ? '\t' : ' '.repeat(options.tabSize || 4);
+}
+
+function formatStructure(lines: string[], indent: string, indentFinalBlank = false) {
+  const output = [...lines];
+  const stack: Frame[] = [];
+  const embedded: Embedded[] = [];
+  let raw: { close: RegExp; start: number; indent: number; parser?: string; preserve: boolean } | undefined;
+  let comment = '';
+  let pendingTag: { name: string; scan: TagEnd; text: string; indent: number } | undefined;
+  let pendingDirective: { name: string; expression: Expression; indent: number } | undefined;
+  let echo: { expression: Expression; delimiter: string } | undefined;
+
+  const frameIndex = (names: string[], kind: Frame['kind']) => {
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (stack[i].kind === kind && names.includes(stack[i].name)) return i;
+    }
+    return -1;
+  };
+  const close = (name: string, kind: Frame['kind']) => {
+    const at = frameIndex([name], kind);
+    if (at >= 0) stack.length = at;
+  };
+  const openDirective = (name: string, expression?: Expression) => {
+    if (BLOCKS.has(name) && !(name === 'section' && expression?.comma)) {
+      stack.push({ name, kind: 'directive' });
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const text = line.trimStart();
+    if (!text) {
+      if (indentFinalBlank && i === lines.length - 1 && !raw && !comment && !echo) {
+        if (pendingTag && !pendingTag.scan.inLiteral) {
+          output[i] = indent.repeat(pendingTag.indent + 1);
+        } else if (pendingDirective && !pendingDirective.expression.quote) {
+          output[i] = indent.repeat(pendingDirective.indent + Math.max(1, pendingDirective.expression.depth - 1));
+        } else if (!pendingTag && !pendingDirective) {
+          output[i] = indent.repeat(stack.length);
+        }
+      }
+      continue;
+    }
+
+    let cursor = 0;
+    let level: number | undefined;
+    let preserve = false;
+
+    const finishTag = (name: string, opening: string, base: number, after: number) => {
+      if (/\/\s*>$/.test(opening) || VOID.has(name)) return;
+      if (!RAW_TAGS.has(name)) {
+        stack.push({ name, kind: 'tag' });
+        return;
+      }
+
+      const closeTag = new RegExp(`</${name}\\s*>`, 'i');
+      const parser = parserFor(name, opening);
+      const closing = closeTag.exec(text.slice(after));
+      if (parser && closing && cursor === 0 && !text.slice(after + closing.index + closing[0].length).trim()) {
+        embedded.push({
+          start: i, end: i, indent: base + 1, parser, opening, closing: closing[0],
+          source: text.slice(after, after + closing.index),
+        });
+      }
+      raw = {
+        close: closeTag,
+        start: i + 1,
+        indent: base + 1,
+        parser: text.slice(after).trim() ? undefined : parser,
+        preserve: name === 'pre' || name === 'textarea',
+      };
+    };
+
+    if (pendingTag) {
+      const tag = pendingTag;
+      preserve = tag.scan.inLiteral;
+      const endAt = tag.scan.scan(text);
+      level = tag.indent + (/^\/?\s*>/.test(text) ? 0 : 1);
+      tag.text += '\n' + text.slice(0, endAt < 0 ? undefined : endAt + 1);
+      if (endAt >= 0) {
+        pendingTag = undefined;
+        cursor = endAt + 1;
+        finishTag(tag.name, tag.text, tag.indent, cursor);
+      } else {
+        cursor = text.length;
+      }
+    } else if (pendingDirective) {
+      const { name, expression, indent: base } = pendingDirective;
+      preserve = !!expression.quote;
+      const depth = expression.depth;
+      const closers = expression.scan(text, ')', 1);
+      level = base + (closers > 0 ? Math.max(0, depth - closers - 1) : Math.max(1, depth - 1));
+      if (expression.end >= 0) {
+        openDirective(name, expression);
+        pendingDirective = undefined;
+        cursor = expression.end;
+      } else {
+        cursor = text.length;
+      }
+    }
+
+    while (cursor < text.length) {
+      const tail = text.slice(cursor);
+      if (raw) {
+        const closing = raw.close.exec(tail);
+        if (level === undefined) {
+          preserve = raw.preserve || closing?.index !== 0;
+          if (!preserve) level = raw.indent - 1;
+        }
+        if (!closing) break;
+        if (raw.parser && cursor === 0 && closing.index === 0) {
+          embedded.push({ start: raw.start, end: i - 1, indent: raw.indent, parser: raw.parser });
+        }
+        cursor += closing.index + closing[0].length;
+        raw = undefined;
+        continue;
+      }
+      if (comment) {
+        if (level === undefined) preserve = true;
+        const at = text.indexOf(comment, cursor);
+        if (at < 0) break;
+        cursor = at + comment.length;
+        comment = '';
+        continue;
+      }
+      if (echo) {
+        if (level === undefined) preserve = true;
+        echo.expression.scan(tail, echo.delimiter);
+        if (echo.expression.end < 0) break;
+        cursor += echo.expression.end;
+        echo = undefined;
+        continue;
+      }
+      if (tail.startsWith('{{--') || tail.startsWith('<!--')) {
+        comment = tail.startsWith('{{--') ? '--}}' : '-->';
+        cursor += 4;
+        continue;
+      }
+      const echoStart = ECHO.exec(tail);
+      if (echoStart) {
+        if (cursor === 0) level = stack.length;
+        echo = { expression: new Expression(), delimiter: ECHO_END[echoStart[0]] };
+        cursor += echoStart[0].length;
+        continue;
+      }
+
+      const tag = TAG.exec(tail);
+      if (tag) {
+        const name = tag[2].toLowerCase();
+        if (tag[1]) close(name, 'tag');
+        if (cursor === 0) level = stack.length;
+        const scan = new TagEnd();
+        const endAt = scan.scan(tail);
+        if (endAt < 0) {
+          if (!tag[1]) pendingTag = { name, scan, text: tail, indent: stack.length };
+          break;
+        }
+        const after = cursor + endAt + 1;
+        if (!tag[1]) finishTag(name, tail.slice(0, endAt + 1), stack.length, after);
+        cursor = after;
+        continue;
+      }
+
+      const directive = (cursor === 0 || !/[\w@]/.test(text[cursor - 1])) && DIRECTIVE.exec(tail);
+      if (directive) {
+        const name = directive[1].toLowerCase();
+        const hasArgs = !!directive[2];
+        const branches = branchOwner(name, hasArgs);
+        const isCase = name === 'case' || name === 'default';
+        const isBreak = name === 'break';
+        const switchAt = isCase ? frameIndex(['switch'], 'directive') : -1;
+        if (isCase && switchAt >= 0) stack.length = switchAt + 1;
+        if (name.startsWith('end')) close(blockName(name.slice(3)), 'directive');
+        if (!hasArgs && SECTION_ENDS.has(name)) close('section', 'directive');
+        const owner = branches.length ? frameIndex(branches, 'directive') : -1;
+        if (owner >= 0) stack.length = owner + 1;
+
+        const base = owner >= 0 ? owner : stack.length;
+        if (cursor === 0) level = base;
+        cursor += directive[0].length;
+
+        if (!hasArgs && RAW_DIRECTIVES.has(name)) {
+          raw = { close: new RegExp(`@end${name}\\b`, 'i'), start: i + 1, indent: base + 1, preserve: false };
+          continue;
+        }
+        if (isCase && switchAt >= 0) stack.push({ name: 'case', kind: 'case' });
+        if (isBreak && !hasArgs && stack[stack.length - 1]?.kind === 'case') stack.pop();
+
+        const block = branches.length || name.startsWith('end') ? '' : blockName(name);
+        if (hasArgs) {
+          const expression = new Expression();
+          expression.depth = 1;
+          expression.scan(text.slice(cursor), ')', 1);
+          if (expression.end < 0) {
+            pendingDirective = { name: block, expression, indent: base };
+            break;
+          }
+          cursor += expression.end;
+          openDirective(block, expression);
+        } else {
+          openDirective(block);
+        }
+        continue;
+      }
+
+      if (cursor === 0 && /^<(?:!|\?)/.test(tail)) level = stack.length;
+      cursor++;
+    }
+
+    if (level !== undefined && !preserve) output[i] = indent.repeat(level) + text;
+  }
+
+  return { output, embedded };
+}
+
+export function onEnterIndent(content: string, options: Options): string | undefined {
+  const lines = content.split(/\r?\n/);
+  const last = lines.length - 1;
+  if (!last) return undefined;
+  const { output } = formatStructure(lines, indentUnit(options), true);
+  if (output[last] === lines[last]) return undefined;
+  return /^\s*/.exec(output[last])![0];
+}
+
 /**
  * Keep template text and expressions verbatim; format structural indentation and
- * complete JS/TS/CSS bodies. Selection boundaries refer to the ORIGINAL lines.
+ * complete JS/TS/CSS bodies. Selection boundaries refer to the original lines.
  */
 export async function formatSaola(
   content: string,
@@ -226,251 +395,8 @@ export async function formatSaola(
   const eol = content.includes('\r\n') ? '\r\n' : '\n';
   const lines = content.split(/\r?\n/);
   end ??= lines.length - 1;
-  const indent = options.insertSpaces === false ? '\t' : ' '.repeat(options.tabSize || 4);
-  const output = [...lines];
-  const stack: Frame[] = [];
-  const embedded: Embedded[] = [];
-  let raw:
-    | { close: string; start: number; indent: number; parser?: string; preserveClose?: boolean }
-    | undefined;
-  let comment = '';
-  let pendingTag: { name: string; text: string; quote: string; indent: number } | undefined;
-  let pendingDirective:
-    | { name: string; expression: Expression; indent: number; text: string }
-    | undefined;
-
-  const close = (name: string, kind: Frame['kind']) => {
-    for (let i = stack.length - 1; i >= 0; i--) {
-      if (stack[i].name === name && stack[i].kind === kind) {
-        stack.length = i;
-        break;
-      }
-    }
-  };
-  const openDirective = (name: string, text: string) => {
-    if (!BLOCKS.has(name)) {
-      return;
-    }
-    // @section(name, value) is inline. Count ONLY top-level commas.
-    if (name === 'section') {
-      const expr = new Expression();
-      const args = text.slice(text.indexOf('(') + 1);
-      // Mask literals first so escaped quotes do not look like argument separators.
-      const masked = args.replace(/(['"`])(?:\\.|(?!\1)[^\\])*?\1/g, '""');
-      for (const ch of masked) {
-        if (ch === ',' && expr.depth === 0 && !expr.quote) {
-          return;
-        }
-        expr.scan(ch);
-      }
-    }
-    if (!new RegExp(`@end${name}\\b`).test(text)) {
-      stack.push({ name, kind: 'directive' });
-    }
-  };
-  const finishTag = (name: string, text: string, line: number, base: number) => {
-    const lower = name.toLowerCase();
-    if (/\/\s*>$/.test(text) || VOID.has(lower)) {
-      return;
-    }
-    if (['pre', 'textarea', 'script', 'style'].includes(lower)) {
-      if (!new RegExp(`</${lower}\\s*>`, 'i').test(text)) {
-        raw = {
-          close: `</${lower}>`,
-          start: line + 1,
-          indent: base + 1,
-          parser: parserFor(lower, text),
-          preserveClose: lower === 'pre' || lower === 'textarea',
-        };
-      }
-    } else {
-      stack.push({ name: lower, kind: 'tag' });
-    }
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const text = line.trim();
-    if (raw) {
-      const closing = raw.close.startsWith('</')
-        ? new RegExp(`^${raw.close.replace('>', '\\s*>')}$`, 'i').test(text)
-        : text === raw.close;
-      if (closing) {
-        if (!raw.preserveClose) {
-          output[i] = indent.repeat(raw.indent - 1) + text;
-        }
-        if (raw.parser) {
-          embedded.push({ start: raw.start, end: i - 1, indent: raw.indent, parser: raw.parser });
-        }
-        raw = undefined;
-      }
-      continue;
-    }
-    if (comment) {
-      if (text.includes(comment)) {
-        comment = '';
-      }
-      continue;
-    }
-    if (pendingDirective) {
-      const p = pendingDirective;
-      // Never reindent inside a multi-line string literal: whitespace is data.
-      const preserve = !!p.expression.quote;
-      const oldDepth = p.expression.depth;
-      const closers = p.expression.scan(text);
-      const level =
-        p.indent + (closers > 0 ? Math.max(0, oldDepth - closers - 1) : Math.max(1, oldDepth - 1));
-      if (!preserve && text) {
-        output[i] = indent.repeat(level) + text;
-      }
-      p.text += '\n' + text;
-      if (p.expression.depth <= 0) {
-        openDirective(p.name, p.text);
-        pendingDirective = undefined;
-      }
-      continue;
-    }
-    if (pendingTag) {
-      const p = pendingTag;
-      const result = tagEnd(text, p.quote);
-      if (!p.quote && text) {
-        output[i] = indent.repeat(p.indent + (/^\/?\s*>/.test(text) ? 0 : 1)) + text;
-      }
-      p.text += '\n' + text;
-      p.quote = result.quote;
-      if (result.end >= 0) {
-        finishTag(p.name, p.text, i, p.indent);
-        pendingTag = undefined;
-      }
-      continue;
-    }
-    if (!text) {
-      continue;
-    }
-    if (text.startsWith('{{--') || text.startsWith('<!--')) {
-      const ending = text.startsWith('{{--') ? '--}}' : '-->';
-      if (!text.includes(ending)) {
-        comment = ending;
-      }
-      // Preserve comments, including examples containing tags/directives.
-      continue;
-    }
-
-    // A complete one-line script/style can expand into a normally formatted block.
-    const inline = /^<(script|style)\b/i.exec(text);
-    if (inline) {
-      const openingEnd = tagEnd(text).end;
-      const closing = new RegExp(`</${inline[1]}\\s*>$`, 'i').exec(text);
-      const parser = parserFor(inline[1].toLowerCase(), text.slice(0, openingEnd + 1));
-      if (parser && openingEnd >= 0 && closing && closing.index > openingEnd) {
-        const opening = text.slice(0, openingEnd + 1);
-        embedded.push({start:i,end:i,indent:stack.length + 1,parser,opening,closing:closing[0],source:text.slice(openingEnd + 1,closing.index)});
-        continue;
-      }
-    }
-
-    const directive = /^@(\w+)\b/.exec(text);
-    if (directive) {
-      const name = directive[1].toLowerCase();
-      if (
-        ['verbatim', 'php', 'script', 'comment'].includes(name) &&
-        !text.slice(directive[0].length).trim().startsWith('(')
-      ) {
-        output[i] = indent.repeat(stack.length) + text;
-        if (!text.includes(`@end${name}`)) {
-          raw = { close: `@end${name}`, start: i + 1, indent: stack.length + 1 };
-        }
-        continue;
-      }
-      if (name.startsWith('end')) {
-        close(name.slice(3), 'directive');
-      }
-      if (name === 'show' || name === 'stop' || name === 'overwrite' || name === 'append') {
-        close('section', 'directive');
-      }
-      if (name === 'case' || name === 'default') {
-        if (stack[stack.length - 1]?.kind === 'case') {
-          stack.pop();
-        }
-      }
-      const isMiddle = MIDDLE.has(name) && (name !== 'empty' || /^@empty\s*$/.test(text));
-      const level = Math.max(0, stack.length - (isMiddle ? 1 : 0));
-      output[i] = indent.repeat(level) + text;
-      if (name === 'break' && stack[stack.length - 1]?.kind === 'case') {
-        stack.pop();
-      }
-      const expression = new Expression();
-      expression.scan(text.slice(directive[0].length));
-      if (expression.depth > 0) {
-        pendingDirective = { name, expression, indent: level, text };
-      } else if (!isMiddle && !name.startsWith('end')) {
-        openDirective(name, text);
-      }
-      if (
-        (name === 'case' || name === 'default') &&
-        stack.some((frame) => frame.name === 'switch')
-      ) {
-        stack.push({ name: 'case', kind: 'case' });
-      }
-      continue;
-    }
-
-    // Walk tags without interpreting quoted attributes, echo expressions, or comments.
-    let cursor = 0;
-    let base = stack.length;
-    let first = true;
-    while (cursor < text.length) {
-      if (text.startsWith('{{--', cursor) || text.startsWith('<!--', cursor)) {
-        const ending = text.startsWith('{{--', cursor) ? '--}}' : '-->';
-        const at = text.indexOf(ending, cursor);
-        if (at < 0) {
-          comment = ending;
-          break;
-        }
-        cursor = at + ending.length;
-        continue;
-      }
-      if (text.startsWith('{{', cursor) || text.startsWith('{!!', cursor)) {
-        const ending = text.startsWith('{{', cursor) ? '}}' : '!!}';
-        const at = text.indexOf(ending, cursor + 2);
-        cursor = at < 0 ? text.length : at + ending.length;
-        continue;
-      }
-      const tag = /^<(\/?)([a-zA-Z_:][\w:.-]*)\b/.exec(text.slice(cursor));
-      if (!tag) {
-        cursor++;
-        continue;
-      }
-      const result = tagEnd(text.slice(cursor));
-      if (tag[1]) {
-        close(tag[2].toLowerCase(), 'tag');
-        if (first && cursor === 0) {
-          base = stack.length;
-        }
-      } else if (result.end < 0) {
-        pendingTag = {
-          name: tag[2],
-          text: text.slice(cursor),
-          quote: result.quote,
-          indent: stack.length,
-        };
-        break;
-      } else {
-        const endAt = cursor + result.end + 1;
-        const rawTag = ['pre', 'textarea', 'script', 'style'].includes(tag[2].toLowerCase());
-        finishTag(tag[2], rawTag ? text.slice(cursor) : text.slice(cursor, endAt), i, stack.length);
-        if (rawTag) {
-          break;
-        }
-      }
-      first = false;
-      cursor += result.end < 0 ? text.length : result.end + 1;
-    }
-    // Plain text whitespace can affect rendering; only reindent structural lines.
-    if (/^(?:<|\{\{|\{!!)/.test(text)) {
-      output[i] = indent.repeat(base) + line.trimStart();
-    }
-  }
+  const indent = indentUnit(options);
+  const { output, embedded } = formatStructure(lines, indent);
 
   // Work backwards so expanding a script body cannot shift another body's indices.
   for (const block of embedded.reverse()) {
@@ -481,30 +407,44 @@ export async function formatSaola(
     // Remove the enclosing tag's margin before formatting. Prettier preserves
     // block-comment interiors; repeatedly adding that margin causes indent drift.
     const source = indentEmbedded(originalSource, '', block.parser, true).join('\n');
+    const declarations = ['babel', 'typescript'].includes(block.parser)
+      ? protectDeclarations(source)
+      : { text: source, originals: new Map<string, string>() };
     try {
-      const declarations = ['babel','typescript'].includes(block.parser) ? protectDeclarations(source) : {text:source,originals:new Map<string,string>()};
-      const formatted = await format(declarations.text, {
+      const prettierOptions = {
         parser: block.parser,
         plugins: [babel, estree, typescript, postcss],
         tabWidth: options.tabSize || 4,
         useTabs: options.insertSpaces === false,
-        embeddedLanguageFormatting: 'off',
-      });
+        embeddedLanguageFormatting: 'off' as const,
+      };
+      const firstPass = await format(declarations.text, prettierOptions);
+      // Prettier can make a different wrapping choice once a chain or CSS value
+      // has been split across lines. Stabilize it before restoring Saola syntax.
+      const formatted = firstPass.trimEnd() === declarations.text.trimEnd()
+        ? firstPass
+        : await format(firstPass, prettierOptions);
       let body = indentEmbedded(
         formatted.replace(/\n$/, ''),
         indent.repeat(block.indent),
         block.parser,
       );
+      const restored = new Set<string>();
       body = body.flatMap(line => {
-        const marker = /^(\s*)([A-Za-z_]\w*)\(\);$/.exec(line);
+        const marker = /^(\s*)([A-Za-z_]\w*)\(\);(.*)$/.exec(line);
         const original = marker && declarations.originals.get(marker[2]);
-        return original ? indentDeclaration(original, marker![1], indent) : [line];
+        if (!marker || !original) return [line];
+        restored.add(marker[2]);
+        const lines = indentDeclaration(original, marker[1], indent);
+        lines[lines.length - 1] += marker[3];
+        return lines;
       });
+      if (restored.size !== declarations.originals.size) continue;
       if (block.opening) body = [indent.repeat(block.indent - 1) + block.opening, ...body, indent.repeat(block.indent - 1) + block.closing];
       output.splice(block.start, block.end - block.start + 1, ...body);
       end += body.length - (block.end - block.start + 1);
     } catch {
-      if (!block.opening && /^[ \t]*@(props|vars|states?|let|const|computed|assets?|importView|useState|middleware|useAuth|useauth)\b/m.test(source)) {
+      if (!block.opening && declarations.originals.size) {
         const body = indentEmbedded(source, indent.repeat(block.indent), block.parser, true);
         output.splice(block.start, block.end - block.start + 1, ...body);
       }

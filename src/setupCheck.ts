@@ -12,6 +12,7 @@
 // declares its names (as `any`) and is never type checked.
 
 import * as ts from 'typescript';
+import { DIRECTIVE, ECHO_END, Expression, TAG, TagEnd } from './templateSyntax';
 
 export interface SetupDiagnostic {
   /** Offset into the .sao source. */
@@ -38,7 +39,7 @@ const DECLARATION = /^[ \t]*@(props|vars|states?|let|const|computed|assets?|impo
 /** Literal/comment spans must stay opaque when recognizing setup declarations. */
 export function setupLiteralRanges(source: string): Array<{start: number; end: number}> {
   const ranges: Array<{start: number; end: number}> = [];
-  const file = ts.createSourceFile('setup.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const file = ts.createSourceFile('setup.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const visit = (node: ts.Node) => {
     if (ts.isStringLiteralLike(node) || ts.isTemplateExpression(node) || ts.isRegularExpressionLiteral(node)) {
       ranges.push({start:node.getStart(file),end:node.end});
@@ -398,8 +399,13 @@ export function checkTemplate(source: string): SetupDiagnostic[] {
     .replace(/@php\b[\s\S]*?@endphp\b/g, blank);
   const expressions: { text: string; offset: number }[] = [];
 
-  // @name(args) and #name(args)
-  const directive = /(?<![\w&])[@#]([A-Za-z_]\w*)\s*\(/g;
+  const addLoopIndex = (text: string) => {
+    const variable = /^\s*(?:(?:let|const|var)\s+)?([A-Za-z_$][\w$]*)\s*=/.exec(text);
+    if (variable) scope.add(variable[1]);
+  };
+
+  // @name(args), including event modifier chains such as @click.stop.once(...).
+  const directive = /(?<![\w&@])@([A-Za-z_][\w-]*)(?:\.[\w-]+)*\s*\(/g;
   for (let m = directive.exec(region); m; m = directive.exec(region)) {
     const open = m.index + m[0].length - 1;
     const end = closeParen(region, open);
@@ -411,14 +417,46 @@ export function checkTemplate(source: string): SetupDiagnostic[] {
       const alias = /\bas\s+([A-Za-z_]\w*)\s*$/.exec(inner);
       if (alias) { scope.add(alias[1]); }
     } else if (m[1] === 'for') {
-      const v = /^\s*(?:let|const|var)?\s*([A-Za-z_]\w*)/.exec(inner);
-      if (v) { scope.add(v[1]); }
+      addLoopIndex(inner);
       expressions.push({ text: inner, offset: open + 1 });
     } else {
       expressions.push({ text: inner, offset: open + 1 });
     }
     directive.lastIndex = end;
   }
+  // #foreach="items as item", #for="i = …" and other built-in tag directives.
+  const tagStart = /<!--|<(?=[a-zA-Z_:])|\{\{\{?|\{!!|(?<![\w@])@/g;
+  for (let m = tagStart.exec(region); m; m = tagStart.exec(region)) {
+    const offset = m.index;
+    if (m[0] === '<!--') {
+      const end = region.indexOf('-->', tagStart.lastIndex);
+      if (end < 0) break;
+      tagStart.lastIndex = end + 3;
+      continue;
+    }
+    if (m[0] === '@') {
+      const directive = DIRECTIVE.exec(region.slice(offset));
+      if (directive?.[2]) {
+        const end = closeParen(region, offset + directive[0].length - 1);
+        if (end >= 0) tagStart.lastIndex = end;
+      }
+      continue;
+    }
+    if (m[0] !== '<') {
+      const expression = new Expression();
+      expression.scan(region.slice(tagStart.lastIndex), ECHO_END[m[0]]);
+      if (expression.end >= 0) tagStart.lastIndex += expression.end;
+      continue;
+    }
+    const tag = region.slice(offset);
+    if (!TAG.test(tag)) continue;
+    const end = new TagEnd().scan(tag, (name, text, start) => {
+      if (name === 'for') addLoopIndex(text);
+      expressions.push({ text, offset: offset + start });
+    });
+    if (end >= 0) tagStart.lastIndex = offset + end + 1;
+  }
+
   // {{ expr }} / {!! expr !!}
   const output = /\{\{(?!--)([\s\S]*?)\}\}|\{!!([\s\S]*?)!!\}/g;
   for (let m = output.exec(region); m; m = output.exec(region)) {

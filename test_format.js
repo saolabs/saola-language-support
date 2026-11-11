@@ -15,9 +15,12 @@ class TextEdit {
 const fullProviders = new Map();
 const rangeProviders = new Map();
 const onTypeProviders = new Map();
+const directiveProviders = new Map();
 const disposable = () => ({ dispose() {} });
 const vscode = {
   Position, Range, TextEdit,
+  CompletionItem: class { constructor(label) { this.label = label; } },
+  SnippetString: class { constructor(value) { this.value = value; } },
   workspace: {
     textDocuments: [], getConfiguration: () => ({ get: () => undefined, update: () => Promise.resolve() }),
     onDidOpenTextDocument: disposable, onDidChangeTextDocument: disposable, onDidCloseTextDocument: disposable,
@@ -25,7 +28,11 @@ const vscode = {
   languages: {
     registerDocumentFormattingEditProvider: (id, provider) => { fullProviders.set(id, provider); return disposable(); },
     registerDocumentRangeFormattingEditProvider: (id, provider) => { rangeProviders.set(id, provider); return disposable(); },
-    registerOnTypeFormattingEditProvider: (id, provider) => { onTypeProviders.set(id, provider); return disposable(); }, registerCompletionItemProvider: disposable,
+    registerOnTypeFormattingEditProvider: (id, provider) => { onTypeProviders.set(id, provider); return disposable(); },
+    registerCompletionItemProvider: (id, provider, ...triggers) => {
+      if (triggers.includes('@') && !triggers.includes('<')) directiveProviders.set(id, provider);
+      return disposable();
+    },
     registerDefinitionProvider: disposable, registerHoverProvider: disposable,
     createDiagnosticCollection: () => ({ ...disposable(), delete() {} }),
   },
@@ -43,7 +50,10 @@ function doc(content) {
   const offsetAt = p => lines.slice(0, p.line).reduce((n, l) => n + l.length + 1, 0) + p.character;
   return {
     getText: range => range ? content.slice(offsetAt(range.start), offsetAt(range.end)) : content,
-    lineAt: line => ({ text: lines[line], range: new Range(new Position(line, 0), new Position(line, lines[line].length)) }),
+    lineAt: position => {
+      const line = typeof position === 'number' ? position : position.line;
+      return { text: lines[line], range: new Range(new Position(line, 0), new Position(line, lines[line].length)) };
+    },
     positionAt: offset => {
       const before = content.slice(0, offset).split('\n');
       return new Position(before.length - 1, before[before.length - 1].length);
@@ -120,10 +130,65 @@ function doc(content) {
   assert.ok(oneLine.includes('<script setup lang="ts">\n    const n: number = 1;\n    function f() {'));
   assert.ok(oneLine.includes('<style>\n    .x {\n        color: red;\n    }\n</style>'));
   assert.equal(await formatSaola(oneLine, spaces), oneLine);
+  const unquotedLang = '<script data-lang="ignored" lang=ts>const x:number=1</script>';
+  assert.ok((await formatSaola(unquotedLang, spaces)).includes('    const x: number = 1;'));
+
+  const mixed = [
+    '<template>',
+    '@serverside',
+    `@section('meta:title', text("@endsection"))`,
+    '<p>Server only</p>',
+    '@endSSR',
+    '@csr<div #if="ready">',
+    '@if(active)<button @click.stop(run(x => x > 1))',
+    ':title="title">',
+    '{{ { value: `<div>` }.value }}',
+    '</button>@endif',
+    '</div>@endclientside',
+    '<pre>before',
+    '  <div>literal',
+    '</pre><section>',
+    '<span>Still nested</span>',
+    '</section>',
+    '</template>',
+  ].join('\n');
+  const mixedExpected = [
+    '<template>',
+    '    @serverside',
+    `        @section('meta:title', text("@endsection"))`,
+    '        <p>Server only</p>',
+    '    @endSSR',
+    '    @csr<div #if="ready">',
+    '            @if(active)<button @click.stop(run(x => x > 1))',
+    '                    :title="title">',
+    '                    {{ { value: `<div>` }.value }}',
+    '                </button>@endif',
+    '        </div>@endclientside',
+    '    <pre>before',
+    '  <div>literal',
+    '</pre><section>',
+    '        <span>Still nested</span>',
+    '    </section>',
+    '</template>',
+  ].join('\n');
+  assert.equal(await formatSaola(mixed, spaces), mixedExpected, 'inline tags, directives and server/client aliases');
+  assert.equal(await formatSaola(mixedExpected, spaces), mixedExpected);
+  assert.equal(await formatSaola(mixed, spaces, 6, 8), mixedExpected.split('\n').slice(6, 9).join('\n'));
+
+  const comments = '<script setup lang="ts">\n@useAuth(); // sync\n@state(n: number = 0) /* keep */\nfunction f(){return n}\n</script>';
+  const formattedComments = await formatSaola(comments, spaces);
+  assert.ok(formattedComments.includes('    @useAuth(); // sync\n    @state(n: number = 0) /* keep */'));
+  assert.ok(formattedComments.includes('    function f() {\n        return n;'));
+  assert.equal(await formatSaola(formattedComments, spaces), formattedComments);
 
   // Exercise the same providers users receive from the actual packaged entry point.
   require(process.env.SAOLA_EXTENSION_ENTRY || './dist/extension').activate({ subscriptions: [] });
   for (const id of ['sao', 'saola']) {
+    const complete = (text) => directiveProviders.get(id).provideCompletionItems(doc(text), new Position(0, text.length), noCancel, {});
+    for (const label of ['@cache', '@asset', '@children', '@viewtype', '@serverside', '@clientside']) {
+      assert.ok(complete(label.slice(0, -1)).some(item => item.label === label), `${id} completion for ${label}`);
+    }
+    assert.ok(complete('@click.st').some(item => item.label === '@click.stop'));
     const provider = fullProviders.get(id);
     assert.ok(provider, `document formatter registered for ${id}`);
     assert.ok(rangeProviders.get(id), `selection formatter registered for ${id}`);
@@ -140,6 +205,13 @@ function doc(content) {
     assert.equal(policyEdits[0].newText, policyResult, 'packaged metadata formatter matches source');
     const enter = onTypeProviders.get(id).provideOnTypeFormattingEdits(doc('@await\n    <template>'), new Position(1, 4), '\n', spaces, noCancel);
     assert.equal(enter[0].newText, '', 'Enter after @await does not indent');
+    const onType = onTypeProviders.get(id);
+    const branchEnter = onType.provideOnTypeFormattingEdits(doc('<template>\n    @serverside\n'), new Position(2, 0), '\n', spaces, noCancel);
+    assert.equal(branchEnter[0].newText, '        ', 'Enter indents inside @serverside');
+    const rawEnter = onType.provideOnTypeFormattingEdits(doc('<pre>\n  '), new Position(1, 2), '\n', spaces, noCancel);
+    assert.deepEqual(rawEnter, [], 'Enter preserves raw text');
+    const inlineSection = onType.provideOnTypeFormattingEdits(doc("<template>\n    @section('title', 'Title')\n        "), new Position(2, 8), '\n', spaces, noCancel);
+    assert.equal(inlineSection[0].newText, '    ', 'Enter does not open a two-argument section');
   }
   assert.equal(await formatSaola(embedded, spaces, 1, 1), '    const count: number = 1;\n    function add(x: number) {\n        return x + count;\n    }', 'complete selected script body');
   const partial = '<script>\nfunction f(){\nreturn 1;\n}\n</script>';

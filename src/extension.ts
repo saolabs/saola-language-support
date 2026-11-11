@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SaoFormatter } from './formatters/saoFormatter';
+import { onEnterIndent } from './formatters/templateFormat';
 import { SaoDefinitionProvider } from './navigation';
 import { checkSetup, checkTemplate, CLOSURE_NAMES } from './setupCheck';
 import { doComplete, VSCodeEmmetConfig } from '@vscode/emmet-helper';
@@ -317,6 +318,9 @@ const BLADE_DIRECTIVES = [
   { label: '@let', detail: 'Mutable local; optional name: Type = value', insertText: '@let(${1:varName = value})' },
   { label: '@const', detail: 'Constant; optional name: Type = value', insertText: '@const(${1:NAME = value})' },
   { label: '@computed', detail: 'Lazy computed; optional type; script reads get$name()', insertText: '@computed(${1:fullName} = ${2:first + \' \' + last})' },
+  { label: '@asset', detail: 'Declare a view asset path', insertText: "@asset(${1:logo} = '${2:images/logo.svg}')" },
+  { label: '@assets', detail: 'Declare multiple view asset paths', insertText: "@assets({ ${1:logo}: '${2:images/logo.svg}' })" },
+  { label: '@cache', detail: 'Set view PageCache policy (true, false, or { ttl: milliseconds })', insertText: '@cache(${1:false})' },
   { label: '@middleware', detail: 'Client route middleware aliases; outside template or top-level script setup', insertText: "@middleware('${1:requireLogin}')" },
   { label: '@useAuth', detail: 'Reactive __auth__ state and set__auth__(value), synchronized with App.Auth', insertText: '@useAuth()' },
   { label: '@useauth', detail: 'Alias of @useAuth()', insertText: '@useauth()' },
@@ -370,10 +374,24 @@ const BLADE_DIRECTIVES = [
 
   // --- View Structure ---
   { label: '@view', detail: 'Configure view/component', insertText: '@view(${1::subscribe})' },
-  { label: '@wrapper', detail: 'Wrap content in component', insertText: '@wrapper(\'${1:component}\')' },
+  { label: '@wrapper', detail: 'Wrap content in an element', insertText: "@wrapper('${1:div}')\n\t$0\n@endwrapper" },
+  { label: '@endwrapper', detail: 'End wrapper block' },
+  { label: '@viewtype', detail: 'Set view type (view, layout, template, component, or html-document)', insertText: "@viewtype('${1:layout}')" },
+  { label: '@children', detail: 'Render the children passed to this component' },
+  { label: '@pageStart', detail: 'Begin the document shell' },
+  { label: '@pageEnd', detail: 'End the document shell' },
+  { label: '@serverside', detail: 'Render only on the server', insertText: '@serverside\n\t$0\n@endserverside' },
+  { label: '@endserverside', detail: 'End server-only block' },
+  { label: '@clientside', detail: 'Render only on the client', insertText: '@clientside\n\t$0\n@endclientside' },
+  { label: '@endclientside', detail: 'End client-only block' },
+  { label: '@ssr', detail: 'Alias of @serverside', insertText: '@ssr\n\t$0\n@endssr' },
+  { label: '@endssr', detail: 'End server-only block' },
+  { label: '@csr', detail: 'Alias of @clientside', insertText: '@csr\n\t$0\n@endcsr' },
+  { label: '@endcsr', detail: 'End client-only block' },
   { label: '@block', detail: 'Define content block', insertText: '@block(\'${1:name}\')\n\t$0\n@endblock' },
   { label: '@endblock', detail: 'End block' },
   { label: '@useBlock', detail: 'Render block content', insertText: '@useBlock(\'${1:name}\')' },
+  { label: '@onBlock', detail: 'Subscribe to block changes', insertText: "@onBlock('${1:name}')" },
   { label: '@mountBlock', detail: 'Mount block (alias)', insertText: '@mountBlock(\'${1:name}\')' },
 
   // --- Async ---
@@ -399,8 +417,7 @@ class OneDirectiveCompletionProvider implements vscode.CompletionItemProvider {
     const lastAtIndex = beforeCursor.lastIndexOf('@');
     const afterAt = beforeCursor.substring(lastAtIndex + 1);
 
-    // Don't suggest if we're inside a string or already past valid directive characters
-    if (/[^a-zA-Z]/.test(afterAt) && afterAt.length > 0) {
+    if (!/^[a-zA-Z0-9_.-]*$/.test(afterAt)) {
       return [];
     }
 
@@ -1250,7 +1267,7 @@ export function activate(context: vscode.ExtensionContext) {
         options: vscode.FormattingOptions,
         _token: vscode.CancellationToken
       ): vscode.TextEdit[] {
-        return _handleOnTypeFormatting(document, position, ch, options);
+        return _token.isCancellationRequested ? [] : _handleOnTypeFormatting(document, position, ch, options);
       }
     }, '\n'),
     vscode.languages.registerOnTypeFormattingEditProvider('saola', {
@@ -1261,7 +1278,7 @@ export function activate(context: vscode.ExtensionContext) {
         options: vscode.FormattingOptions,
         _token: vscode.CancellationToken
       ): vscode.TextEdit[] {
-        return _handleOnTypeFormatting(document, position, ch, options);
+        return _token.isCancellationRequested ? [] : _handleOnTypeFormatting(document, position, ch, options);
       }
     }, '\n')
   );
@@ -1272,12 +1289,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCompletionItemProvider(
       'sao',
       new OneDirectiveCompletionProvider(),
-      '@'
+      '@', '.'
     ),
     vscode.languages.registerCompletionItemProvider(
       'saola',
       new OneDirectiveCompletionProvider(),
-      '@'
+      '@', '.'
     )
   );
 
@@ -1483,60 +1500,12 @@ function _handleOnTypeFormatting(
   ch: string,
   options: vscode.FormattingOptions
 ): vscode.TextEdit[] {
-  if (ch !== '\n') { return []; }
-
-  const tabSize = options.tabSize || 4;
-  const insertSpaces = options.insertSpaces !== false;
-  const indent = insertSpaces ? ' '.repeat(tabSize) : '\t';
-
-  // Get the previous line (the line before where Enter was pressed)
-  const prevLineNum = position.line - 1;
-  if (prevLineNum < 0) { return []; }
-
-  const prevLine = document.lineAt(prevLineNum).text;
-  const prevTrimmed = prevLine.trim();
-  const currentLine = document.lineAt(position.line).text;
-  const currentTrimmed = currentLine.trim();
-
-  // Calculate previous line's indent level
-  let prevIndent = 0;
-  for (const char of prevLine) {
-    if (char === ' ') { prevIndent++; }
-    else if (char === '\t') { prevIndent += tabSize; }
-    else { break; }
-  }
-  const prevIndentLevel = Math.floor(prevIndent / tabSize);
-
-  // Blade opening directives
-  const openDirectives = /^@(if|unless|foreach|forelse|for|while|switch|auth|guest|can|cannot|canany|section|component|slot|push|prepend|once|php|isset|empty|env|production|verbatim|error|block|comment|states)\b/;
-  // HTML opening tag (not void, not self-closing, support custom tags)
-  const htmlOpenTag = /^<(?!area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([a-zA-Z0-9:-]+)\b[^/>]*>\s*$/;
-  // Opening brace/bracket
-  const openBrace = /[{\[]\s*$/;
-
-  let targetIndentLevel = prevIndentLevel;
-
-  if (openDirectives.test(prevTrimmed)) {
-    targetIndentLevel = prevIndentLevel + 1;
-  } else if (htmlOpenTag.test(prevTrimmed)) {
-    targetIndentLevel = prevIndentLevel + 1;
-  } else if (openBrace.test(prevTrimmed)) {
-    targetIndentLevel = prevIndentLevel + 1;
-  }
-
-  // If next line is a closing tag, don't increase indent
-  const closingDirective = /^@(endif|endunless|endforeach|endforelse|endfor|endwhile|endswitch|endauth|endguest|endcan|endcannot|endcanany|endsection|endcomponent|endslot|endpush|endprepend|endonce|endphp|endisset|endempty|endenv|endproduction|endverbatim|enderror|endblock|endcomment)\b/;
-
-  if (closingDirective.test(currentTrimmed) || /^<\/ /.test(currentTrimmed)) {
-    // Don't change - let the language config handle it
-    return [];
-  }
-
-  const targetIndentStr = indent.repeat(targetIndentLevel);
-  const currentLineRange = new vscode.Range(
-    new vscode.Position(position.line, 0),
-    new vscode.Position(position.line, currentLine.length - currentTrimmed.length)
-  );
-
-  return [new vscode.TextEdit(currentLineRange, targetIndentStr)];
+  if (ch !== '\n' || position.line === 0) return [];
+  const line = document.lineAt(position.line);
+  const currentIndent = /^\s*/.exec(line.text)![0];
+  const prefix = document.getText(new vscode.Range(new vscode.Position(0, 0), line.range.end));
+  const indent = onEnterIndent(prefix, options);
+  if (indent === undefined || indent === currentIndent) return [];
+  const range = new vscode.Range(new vscode.Position(position.line, 0), new vscode.Position(position.line, currentIndent.length));
+  return [vscode.TextEdit.replace(range, indent)];
 }

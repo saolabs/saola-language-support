@@ -22,6 +22,8 @@
         "3": { "name": "punctuation.definition.tag.end.html" }
       },
       "patterns": [
+        { "include": "#setup-script" },
+        { "include": "#raw-template" },
         { "include": "#legacy-blade" },
         { "include": "text.html.derivative" }
       ]
@@ -41,6 +43,7 @@
         "3": { "name": "punctuation.definition.tag.end.html" }
       },
       "patterns": [
+        { "include": "#setup-script" },
         { "include": "#blade" },
         { "include": "text.html.derivative" }
       ]
@@ -52,11 +55,40 @@
       "include": "text.html.derivative"
     }
   ],
+  "injections": {
+    "L:meta.tag -string -comment -meta.embedded.inline.js": {
+      "patterns": [{ "include": "#tag-directives" }]
+    }
+  },
   "repository": {
+    "tag-directives": {
+      "patterns": [
+        {
+          "comment": "Built-in and project-defined directives with a quoted expression",
+          "begin": "(?<!\\S)(#(?!(?:else|default)(?![a-z0-9_-]))[a-z][a-z0-9_-]*)\\s*(=)\\s*([\"'])",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.saola" },
+            "2": { "name": "punctuation.separator.key-value.html" },
+            "3": { "name": "string.quoted.saola punctuation.definition.string.begin.saola" }
+          },
+          "end": "\\3",
+          "endCaptures": {
+            "0": { "name": "string.quoted.saola punctuation.definition.string.end.saola" }
+          },
+          "contentName": "meta.embedded.inline.js",
+          "patterns": [{ "include": "#js-expr" }]
+        },
+        {
+          "comment": "Built-in directives without values",
+          "match": "(?<!\\S)(#(?:else|default))(?=[\\s/>]|$)(?!\\s*=)",
+          "name": "keyword.control.saola"
+        }
+      ]
+    },
     "setup-script": {
       "name": "meta.embedded.block.saola.setup",
       "contentName": "source.ts",
-      "begin": "(<)(script)(?=\\s[^>]*\\bsetup(?:\\s|=|>))([^>]*)(>)",
+      "begin": "(<)(script)(?=(?:\"[^\"]*\"|'[^']*'|[^\"'<>])*?\\ssetup(?=[\\s=>]))((?:\"[^\"]*\"|'[^']*'|[^\"'<>])*)(>)",
       "beginCaptures": {
         "0": {
           "name": "meta.tag.metadata.script.start.html"
@@ -167,8 +199,29 @@
         }
       ]
     },
+    "raw-template": {
+      "patterns": [
+        {
+          "comment": "Literal template content in @verbatim",
+          "name": "meta.verbatim.saola",
+          "begin": "(?i)(?<![A-Za-z0-9_@])(@verbatim)\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          },
+          "end": "(?i)(?<![A-Za-z0-9_@])(@endverbatim)\\b",
+          "endCaptures": {
+            "1": {
+              "name": "keyword.blade"
+            }
+          }
+        }
+      ]
+    },
     "blade": {
       "patterns": [
+        { "include": "#raw-template" },
         {
           "comment": "Blade comment {{-- --}}",
           "begin": "{{--",
@@ -187,7 +240,7 @@
         },
         {
           "comment": "@php ... @endphp block with PHP highlighting",
-          "begin": "(?<![A-Za-z0-9_@])(@php)\\b",
+          "begin": "(?<![A-Za-z0-9_@])(@php)\\b(?![ \\t]*\\()",
           "beginCaptures": {
             "1": {
               "name": "keyword.blade"

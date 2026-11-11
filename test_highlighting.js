@@ -90,6 +90,16 @@ async function main() {
     assert.ok(scopesAt(singleState, 'GridRow').scopes.includes('entity.name.type.ts'), 'states GridRow type');
     assert.ok(scopesAt(singleState, 'boolean').scopes.includes('support.type.primitive.ts'), 'states boolean type');
 
+    const wrapperStack = grammar.tokenizeLine('<template>', textmate.INITIAL).ruleStack;
+    const nestedSetup = grammar.tokenizeLine('<script data-title="x > y" lang="ts" setup>', wrapperStack).ruleStack;
+    assert.ok(scopesAt('@asset(logo = "logo.svg")', '@asset', nestedSetup).scopes.includes('keyword.blade'));
+    const regularScript = grammar.tokenizeLine('<script data-title=" setup ">', textmate.INITIAL).ruleStack;
+    assert.ok(!scopesAt('const x = 1', 'const', regularScript).scopes.includes('meta.embedded.block.saola.setup'));
+    const verbatim = grammar.tokenizeLine('@verbatim', wrapperStack).ruleStack;
+    assert.ok(!scopesAt('@cache(false)', '@cache', verbatim).scopes.includes('keyword.blade'));
+    const afterVerbatim = grammar.tokenizeLine('@endverbatim', verbatim).ruleStack;
+    assert.ok(scopesAt('@cache(false)', '@cache', afterVerbatim).scopes.includes('keyword.blade'));
+
     // 3b. Arrow function in directive/expression (#js-expr)
     const arrowExpr = "@click(() => handleClick())";
     assert.ok(scopesAt(arrowExpr, '=>').scopes.includes('storage.type.function.arrow.js'), 'arrow => in js-expr');
@@ -165,43 +175,47 @@ async function main() {
     console.log('highlighting: TextMate tag, declaration and TypeScript scopes passed');
     console.log('highlighting: <script setup> body reports the typescript embedded language');
 
-    // ── Directive viết trên thẻ: #if / #elseif / #else / #switch / … ──────
-    //
-    // Chúng nằm trong grammar INJECTION. Ở đây nạp nó như grammar CHÍNH: cái
-    // cần kiểm là các regex vừa thêm, không phải cơ chế injection của VS Code
-    // (cơ chế đó đã chạy sẵn cho `:attr`). Muốn kiểm qua đường injection thật
-    // thì phải nạp cả `text.html.derivative` để có scope `meta.tag` —
-    // không đáng cho thứ này.
-    //
-    // Tên directive là tập ĐÓNG, khớp với compiler (`#foo` lạ là lỗi biên
-    // dịch). Nhờ vậy `#fff` trong `style="color: #fff"` và `#section` trong
-    // `href="#section"` KHÔNG bị tô như directive — chính là bug đã phải sửa
-    // ở phía compiler khi regex quét cả giá trị thuộc tính.
+    // Tokenize through the Saola grammar with HTML tag and string scopes.
+    // Loading the injection as a root grammar would bypass its selectors.
     const injectionSource = fs.readFileSync(path.join(__dirname, 'syntaxes/sao-injection.tmLanguage.json'), 'utf8');
     const injectedRegistry = new textmate.Registry({
         onigLib: Promise.resolve({
             createOnigScanner: patterns => new oniguruma.OnigScanner(patterns),
             createOnigString: value => new oniguruma.OnigString(value),
         }),
-        // Grammar chính vẫn phải nạp được: pattern trong injection có
-        // `include: "text.html.saola#js-expr"`, không giải được thì TOÀN BỘ
-        // pattern im lặng không khớp gì cả.
+        getInjections: scope => scope === 'text.html.saola' ? ['text.html.saola.injection'] : [],
         loadGrammar: async scopeName => {
             if (scopeName === 'text.html.saola.injection') return textmate.parseRawGrammar(injectionSource, 'sao-injection.tmLanguage.json');
             if (scopeName === 'text.html.saola') return textmate.parseRawGrammar(grammarSource, 'sao.tmLanguage.json');
+            if (scopeName === 'text.html.derivative') {
+                return {
+                    scopeName,
+                    patterns: [{
+                        begin: '<[a-zA-Z_:][\\w:.-]*',
+                        end: '/?>',
+                        name: 'meta.tag.other.html',
+                        patterns: [
+                            { begin: '"', end: '"', name: 'string.quoted.double.html' },
+                            { begin: "'", end: "'", name: 'string.quoted.single.html' },
+                            { match: '[#a-zA-Z_][\\w:-]*', name: 'entity.other.attribute-name.html' },
+                        ],
+                    }],
+                };
+            }
             return null;
         },
     });
-    const injected = await injectedRegistry.loadGrammar('text.html.saola.injection');
+    const injected = await injectedRegistry.loadGrammar('text.html.saola');
     assert.ok(injected);
 
     const DIRECTIVE = 'keyword.control.saola';
-    const hasDirectiveScope = (line, needle) => {
-        const tokens = injected.tokenizeLine(line).tokens;
+    const injectedScopes = (line, needle, stack = textmate.INITIAL) => {
+        const tokens = injected.tokenizeLine(line, stack).tokens;
         const index = line.indexOf(needle);
         assert.notEqual(index, -1, needle);
         const token = tokens.find(item => item.startIndex <= index && item.endIndex > index);
-        return Boolean(token && token.scopes.includes(DIRECTIVE));
+        assert.ok(token, needle);
+        return token.scopes;
     };
 
     for (const [line, needle] of [
@@ -215,8 +229,12 @@ async function main() {
         ['<li #foreach="rows as row" #key="row[\'id\']">x</li>', '#key'],
         ['<p #for="i = 0; i < n; i++">x</p>', '#for'],
         ['<p #while="i < n">x</p>', '#while'],
+        ['<p #permission="route">x</p>', '#permission'],
+        ["<:template #if='ready'>", '#if'],
     ]) {
-        assert.ok(hasDirectiveScope(line, needle), `directive scope for ${needle} in ${line}`);
+        const scopes = injectedScopes(line, needle);
+        assert.ok(scopes.includes(DIRECTIVE), `directive scope for ${needle} in ${line}`);
+        assert.ok(!scopes.includes('entity.other.attribute-name.html'), 'directive uses keyword color');
     }
 
     for (const [line, needle] of [
@@ -225,9 +243,27 @@ async function main() {
         ['<a title="xem #important">x</a>', '#important'],
         ['<div class="a #b">x</div>', '#b'],
         ['<p>giá #1 là 100</p>', '#1'],
+        ['<p>Example #else and #if="ready"</p>', '#else'],
+        [`<a title='literal #if="ready" and #else'>x</a>`, '#if'],
+        [`<a title='literal #if="ready" and #else'>x</a>`, '#else'],
+        ['<p #default="value">x</p>', '#default'],
     ]) {
-        assert.ok(!hasDirectiveScope(line, needle), `${needle} phải KHÔNG được tô như directive: ${line}`);
+        assert.ok(!injectedScopes(line, needle).includes(DIRECTIVE), `ordinary text: ${needle} in ${line}`);
     }
+
+    const expression = `<div #if="__auth__ && items.length > 0" class="box">`;
+    assert.ok(injectedScopes(expression, '__auth__').includes('variable.other.readwrite.ts'));
+    assert.ok(injectedScopes(expression, '&&').includes('keyword.operator.js'));
+    assert.ok(injectedScopes(expression, '0').includes('constant.numeric.js'));
+    assert.ok(injectedScopes(expression, '=').includes('punctuation.separator.key-value.html'));
+    assert.ok(injectedScopes(expression, '"').includes('punctuation.definition.string.begin.saola'));
+    assert.ok(injectedScopes(expression, '" class').includes('punctuation.definition.string.end.saola'));
+    assert.ok(injectedScopes(expression, 'class').includes('entity.other.attribute-name.html'));
+    assert.ok(!injectedScopes(expression, 'class').includes('meta.embedded.inline.js'));
+
+    const openTag = injected.tokenizeLine('<div').ruleStack;
+    assert.ok(injectedScopes(`#if='__auth__'>`, '#if', openTag).includes(DIRECTIVE));
+    assert.ok(injectedScopes(`#if='__auth__'>`, '__auth__', openTag).includes('variable.other.readwrite.ts'));
 
     console.log('highlighting: tag directives (#if/#switch/#foreach/…) scoped, plain # left alone');
 }

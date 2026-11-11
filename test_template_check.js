@@ -33,6 +33,17 @@ assert.deepEqual(hits(view.replace('{{ title }}', '{{ nope1 }}').replace('@click
 // Không báo: khoá object, thuộc tính, tên hàm gọi (helper), chuỗi, comment Blade, @verbatim, <script> thường
 assert.deepEqual(hits(`@vars(x)<template>{{ fmt(x.y.z) }}{{ {k: 1}.k }}{{-- {{ ghost }} --}}@verbatim{{ ghost2 }}@endverbatim<script>ghost3</script>{{ 'ghost4' }}</template>`), []);
 
+const tagDirectives = `@vars(items = [])
+<template>
+    @section('example', '<p #if="ignored">')
+    <div #foreach="items as item" #if='item.visible'>
+        <span #for="i = 0; i < item.count; i++">{{ item.name }} {{ i }}</span>
+    </div>
+    <div #if="missing" title='see #if="ignored"'>{{ '<p #if="ignored">' }}</div>
+    <button @click.stop.once(handle(missingHandlerArg))>Run</button>
+</template>`;
+assert.deepEqual(hits(tagDirectives), ['missingHandlerArg', 'missing']);
+
 // Scope gộp đủ: closure, khai báo ngoài/trong script, setter, get$, method legacy
 const scope = viewScope(view);
 for (const n of ['__layout__', '$view', 'title', 'items', 'count', 'setCount', 'doubled', 'get$doubled', 'bump', 'legacy']) { assert.ok(scope.has(n), n); }

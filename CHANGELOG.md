@@ -7,6 +7,14 @@ Các thay đổi đáng chú ý của **Saola for VS Code**.
 
 ---
 
+## [1.2.2] — 2026-11-10
+
+- Tô màu tên và biểu thức trong `#directive="expr"`, kể cả directive do dự án khai báo.
+- Bổ sung gợi ý cho `@cache`, `@asset`, `@children` và các khối SSR/CSR. Diagnostics nhận biết biến vòng lặp từ `#foreach` và `#for`.
+- Sửa thụt lề khi HTML và directive nằm cùng dòng, khi biểu thức có dấu `>` và khi khai báo setup có comment cuối dòng.
+
+---
+
 ## [1.2.1] — 2026-11-02
 
 - Đồng bộ logo extension và file `.sao` sang hình đầu sao la; giữ các biến thể tương phản cho nền sáng/tối.

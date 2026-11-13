@@ -29,6 +29,8 @@ export const CLOSURE_NAMES: Record<string, string> = {
   __base__: 'string', __layout__: 'string', __page__: 'string', __component__: 'string',
   __template__: 'string', __module__: 'string', __context__: 'string', __partial__: 'string',
   __system__: 'string', __env: 'any', __helper: 'any',
+  // Nhóm thiết lập công khai của website (core SiteProvider); `const` nên gán bị TS báo lỗi.
+  __site: 'Readonly<Record<string, any>>',
   App: 'any', $view: 'any', $app: 'any', $controller: 'any',
   useState: 'any', updateRealState: 'any', lockUpdateRealState: 'any', updateStateByKey: 'any',
   View: 'any', ViewController: 'any', app: 'any', Application: 'any',
